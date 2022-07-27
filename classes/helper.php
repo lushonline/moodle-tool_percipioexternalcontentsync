@@ -171,9 +171,15 @@ class tool_percipioexternalcontentsync_helper {
         $record = new \stdClass();
 
         // Set defaults.
-        $record->external_printheading = $extcontdefaults->printheading;
-        $record->external_printintro = $extcontdefaults->printintro;
-        $record->external_printlastmodified = $extcontdefaults->printlastmodified;
+        if (property_exists('$extcontdefaults', 'printheading')) {
+            $record->external_printheading = $extcontdefaults->printheading;
+        }
+        if (property_exists('$extcontdefaults', 'printintro')) {
+            $record->external_printintro = $extcontdefaults->printintro;
+        }
+        if (property_exists('$extcontdefaults', 'printlastmodifie')) {
+            $record->external_printlastmodified = $extcontdefaults->printlastmodifies;
+        }
 
         // Lookup the parent category information.
         $record->category = self::resolve_category_by_id_or_idnumber($parentcategory);
@@ -626,9 +632,16 @@ class tool_percipioexternalcontentsync_helper {
         $externalcontent->completionview = 1;
         $externalcontent->completionexternally = $record->external_markcompleteexternally;
 
-        $externalcontent->printintro = $record->external_printintro;
-        $externalcontent->printheading = $record->external_printheading;
-        $externalcontent->printlastmodified = $record->external_printlastmodified;
+        // Set defaults.
+        if (property_exists('$record', 'external_printheading')) {
+            $externalcontent->printheading = $record->external_printheading;
+        }
+        if (property_exists('$record', 'external_printintro')) {
+            $externalcontent->printintro = $record->external_printintro;
+        }
+        if (property_exists('$record', 'external_printlastmodified')) {
+            $externalcontent->printlastmodified = $record->external_printlastmodified;
+        }
 
         return $externalcontent;
     }
