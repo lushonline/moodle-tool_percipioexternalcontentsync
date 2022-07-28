@@ -171,13 +171,13 @@ class tool_percipioexternalcontentsync_helper {
         $record = new \stdClass();
 
         // Set defaults.
-        if (property_exists('$extcontdefaults', 'printheading')) {
+        if (property_exists($extcontdefaults, 'printheading')) {
             $record->external_printheading = $extcontdefaults->printheading;
         }
-        if (property_exists('$extcontdefaults', 'printintro')) {
+        if (property_exists($extcontdefaults, 'printintro')) {
             $record->external_printintro = $extcontdefaults->printintro;
         }
-        if (property_exists('$extcontdefaults', 'printlastmodifie')) {
+        if (property_exists($extcontdefaults, 'printlastmodifie')) {
             $record->external_printlastmodified = $extcontdefaults->printlastmodifies;
         }
 
@@ -633,13 +633,13 @@ class tool_percipioexternalcontentsync_helper {
         $externalcontent->completionexternally = $record->external_markcompleteexternally;
 
         // Set defaults.
-        if (property_exists('$record', 'external_printheading')) {
+        if (property_exists($record, 'external_printheading')) {
             $externalcontent->printheading = $record->external_printheading;
         }
-        if (property_exists('$record', 'external_printintro')) {
+        if (property_exists($record, 'external_printintro')) {
             $externalcontent->printintro = $record->external_printintro;
         }
-        if (property_exists('$record', 'external_printlastmodified')) {
+        if (property_exists($record, 'external_printlastmodified')) {
             $externalcontent->printlastmodified = $record->external_printlastmodified;
         }
 
