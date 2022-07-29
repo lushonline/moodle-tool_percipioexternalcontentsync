@@ -21,7 +21,6 @@
  * @copyright  2019-2022 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-namespace tool_percipioexternalcontentsync;
 defined('MOODLE_INTERNAL') || die;
 
 global $CFG;
@@ -36,7 +35,7 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
  * @copyright 2019-2022 LushOnline
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class helper {
+class tool_percipioexternalcontentsync_helper {
 
     /**
      * Convert the Percipio Asset details to the HTML Description.

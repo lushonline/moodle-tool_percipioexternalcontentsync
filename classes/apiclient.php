@@ -21,8 +21,6 @@
  * @copyright  2019-2022 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-namespace tool_percipioexternalcontentsync;
-
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot.'/mod/externalcontent/lib.php');
@@ -31,7 +29,7 @@ require_once($CFG->dirroot.'/lib/filelib.php');
 /**
  * Web service class.
  */
-class apiclient {
+class tool_percipioexternalcontentsync_apiclient {
 
     /**
      * Organization ID.
