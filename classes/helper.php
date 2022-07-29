@@ -39,6 +39,23 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
 class helper {
 
     /**
+     * Convert the Percipio Asset details for learningObjectives to HTML unordered list
+     *
+     * @param object $asset The asset we recieved from Percipio
+     * @return string The asset converted to a HTML formatted description
+     */
+    private static function get_percio_asset_learning_objectives($asset) {
+        $result = '';
+
+        $result .= '<ul>';
+        foreach ($asset->learningObjectives as $value) {
+            $result .= '<li>'.$value.'</li>';
+        }
+        $result .= '</ul>';
+        return $result;
+    }
+
+    /**
      * Convert the Percipio Asset details to the HTML Description.
      *
      * @param object $asset The asset we recieved from Percipio
@@ -46,13 +63,24 @@ class helper {
      */
     private static function get_percio_asset_description($asset) {
         $result = '';
-
-        $result .= !empty($asset->contentType->displayLabel) ? 'Type: '.$asset->contentType->displayLabel.'<br/>' : '';
-        if (count($asset->by) > 0) {
-            $result .= 'By: '.implode(', ', $asset->by ).'<br/>';
-        }
+        $result .= 'Language: '.$asset->localeCodes[0].'<br/>' : '';
+        $result .= !empty($asset->contentType->displayLabel) ?
+                        'Type: '.$asset->contentType->displayLabel.'<br/>' : '';
+        $result .= count($asset->by) > 0 ?
+                        'Author: '.implode(', ', $asset->by ).'<br/>' : '';
+        $result .= !empty($asset->publication->publisher) ?
+                        'Publisher: '.$asset->publication->publisher.'<br/>' : '';
+        $result .= !empty($asset->publication->copyrightYear) ?
+                        'Copyright: '.$asset->publication->copyrightYear.'<br/>' : '';
+        $result .= !empty($asset->publication->isbn) ?
+                        'ISBN: '.$asset->publication->isbn.'<br/>' : '';
         $result .= !empty($asset->localizedMetadata[0]->description) ?
                         '<br/>'.$asset->localizedMetadata[0]->description.'<br/>' : '';
+        if (count($asset->learningObjectives) >0) {
+            $result .= 'Learning Objectives: <br/>';
+            $result .= self::get_percio_asset_learning_objectives($asset);
+            $result .= '</br>';
+        }
         return $result;
     }
 
