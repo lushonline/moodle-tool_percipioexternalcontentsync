@@ -61,6 +61,7 @@ $string['errorservererror'] = 'Catalog API Call failed.  Server sent : "{$a}"';
 $string['errorjsonparse'] = 'Could not parse response: JSON parsing error: "{$a}"';
 $string['errorapicall'] = 'Catalog API Call failed:"{$a}"';
 $string['errorservererror'] = 'Catalog API Call failed.  Server sent : "{$a}"';
+$string['errorwebservice'] = 'API Client Exception:"{$a}"';
 
 // Cache.
 $string['cachedef_helper'] = 'Upload page helper caching';

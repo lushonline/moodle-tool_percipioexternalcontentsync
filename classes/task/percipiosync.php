@@ -24,6 +24,9 @@
 
 namespace tool_percipioexternalcontentsync\task;
 
+use \tool_percipioexternalcontentsync\helper;
+use \tool_percipioexternalcontentsync\apiclient;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
@@ -39,8 +42,8 @@ require_once($CFG->dirroot . '/mod/externalcontent/lib.php');
 class percipiosync extends \core\task\scheduled_task {
 
     /**
-     * The tool_percipioexternalcontentsync_client instance used to query for data.
-     * @var tool_percipioexternalcontentsync_apiclient
+     * The \tool_percipioexternalcontentsync\apiclient instance used to query for data.
+     * @var \tool_percipioexternalcontentsync\apiclient
      */
     protected $service = null;
 
@@ -140,7 +143,7 @@ class percipiosync extends \core\task\scheduled_task {
                 $this->trace->output('Response: '.$requestcounter.' Downloaded: '.$downloaded.' of '.$totalcount);
                 $this->trace->output('Start Processing: '.$requestcounter);
                 foreach ($assetlist as $asset) {
-                    $importresult = \tool_percipioexternalcontentsync_helper::import_percio_asset($asset,
+                    $importresult = helper::import_percio_asset($asset,
                                                                                                   $parentcategory,
                                                                                                   $coursethumbnail);
                     if ($importresult->success && !$importresult->warn) {
@@ -216,7 +219,7 @@ class percipiosync extends \core\task\scheduled_task {
         }
 
         if (is_null($this->service)) {
-            $this->service = new \tool_percipioexternalcontentsync_apiclient($this->trace, false);
+            $this->service = new \tool_percipioexternalcontentsync\apiclient($this->trace, false);
         }
 
         // We will most certainly need extra time and memory to process big files.
@@ -226,7 +229,7 @@ class percipiosync extends \core\task\scheduled_task {
         try {
             // Capture current time as an ISO8601 formatted value using ZULU time.
             $starttimestamp = date('c', time());
-            if ($success = $this->get_all_metadata($config->category,
+            if ($success = self::get_all_metadata($config->category,
                                                    $config->updatedsince,
                                                    intval($config->max),
                                                    null,

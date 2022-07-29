@@ -21,6 +21,7 @@
  * @copyright  2019-2022 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+namespace tool_percipioexternalcontentsync;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot.'/mod/externalcontent/lib.php');
@@ -29,7 +30,7 @@ require_once($CFG->dirroot.'/lib/filelib.php');
 /**
  * Web service class.
  */
-class tool_percipioexternalcontentsync_apiclient {
+class apiclient {
 
     /**
      * Organization ID.
@@ -87,7 +88,7 @@ class tool_percipioexternalcontentsync_apiclient {
         if (!empty($config->orgid)) {
             $this->orgid = $config->orgid;
         } else {
-            throw new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
+            throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
             get_string('errornoorgid', 'tool_percipioexternalcontentsync'));
         }
 
@@ -95,7 +96,7 @@ class tool_percipioexternalcontentsync_apiclient {
         if (!empty($config->bearer)) {
             $this->bearer = $config->bearer;
         } else {
-            throw new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
+            throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
             get_string('errornobearer', 'tool_percipioexternalcontentsync'));
         }
 
@@ -103,7 +104,7 @@ class tool_percipioexternalcontentsync_apiclient {
         if (!empty($config->baseurl)) {
             $this->baseurl = $config->baseurl;
         } else {
-            throw new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
+            throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '',
             get_string('errornobaseurl', 'tool_percipioexternalcontentsync'));
         }
     }
@@ -147,7 +148,7 @@ class tool_percipioexternalcontentsync_apiclient {
      */
     protected function get_curl_object() {
         if (empty($this->curlinstance)) {
-            $this->curlinstance = new curl();
+            $this->curlinstance = new \curl();
         }
 
         return $this->curlinstance;
@@ -169,12 +170,6 @@ class tool_percipioexternalcontentsync_apiclient {
         $curl = $this->get_curl_object();
         $curl->setHeader('Authorization: Bearer ' . $this->bearer);
 
-        if ($this->debug) {
-            $this->trace->output('make_call - request. url: '.$url);
-            $this->trace->output('make_call - request. method: '.$method);
-            $this->trace->output('make_call - request. data: '.var_dump($data));
-        }
-
         // Set the body.
         if ($method != 'get') {
             $curl->setHeader('Content-Type: application/json');
@@ -184,42 +179,45 @@ class tool_percipioexternalcontentsync_apiclient {
         $response = $this->make_curl_call($curl, $method, $url, $data);
 
         if ($curl->get_errno()) {
-            throw new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '', $curl->error);
+            throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync', '', $curl->error);
         }
 
-        $response = json_decode($response);
+        $jsonresponse = json_decode($response);
 
         $headers = $curl->getResponse();
 
         $httpstatus = $curl->get_info()['http_code'];
-
-        if ($this->debug) {
-            $this->trace->output('make_call - response. url: '.$httpstatus);
-            $this->trace->output('make_call - response. headers: '.var_dump($headers));
-        }
+        $message = '';
 
         if ($httpstatus >= 400) {
             if ($response) {
-                $message = 'HTTP Status: '.$httpstatus.' ';
-                if (isset($response->error)) {
-                    $message .= 'Message: '.$response->error;
+                $message .= 'HTTP Status: '.$httpstatus.'.';
+                if (isset($jsonresponse->error)) {
+                    $message .= ' Parsed Error: '.$response->error.'.';
                 }
 
-                if (isset($response->errors) && isset($response->errors[0]->code)) {
-                    $message .= 'Message: '.$response->errors[0]->code;
+                if (isset($jsonresponse->errors)) {
+                    $message .= ' Parsed Errors.';
+                    foreach ($jsonresponse->errors as $error) {
+                        $message .= ' Code: '.$error->code;
+                        if (property_exists($error, 'additionalInfo')) {
+                            $message .= ' Message: ';
+                            $message .= $error->additionalInfo;
+                        }
+                    }
                 }
-                $exception = new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync',
-                                    '', $message);
-                throw $exception;
+
+                throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync',
+                '', $message);
             } else {
-                throw new moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync',
+                throw new \moodle_exception('errorwebservice', 'tool_percipioexternalcontentsync',
                                 '', 'HTTP Status: '.$httpstatus);
             }
         }
 
         $results = new \stdClass();
         $results->status = $httpstatus;
-        $results->data = $response;
+        $results->data = $jsonresponse;
         $results->headers = $headers;
 
         return $results;
