@@ -21,6 +21,7 @@
  * @copyright  2019-2022 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+namespace tool_percipioexternalcontentsync;
 defined('MOODLE_INTERNAL') || die;
 
 global $CFG;
@@ -35,7 +36,25 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
  * @copyright 2019-2022 LushOnline
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class tool_percipioexternalcontentsync_helper {
+class helper {
+
+    /**
+     * Convert the Percipio Asset details for learningObjectives to HTML unordered list
+     *
+     * @param object $asset The asset we recieved from Percipio
+     * @return string The asset converted to a HTML formatted description
+     */
+    private static function get_percio_asset_learning_objectives($asset) {
+        $result = '';
+
+        $result .= '<ul>';
+        foreach ($asset->learningObjectives as $value) {
+            $result .= '<li>'.$value.'</li>';
+        }
+        $result .= '</ul>';
+        return $result;
+    }
+
 
     /**
      * Convert the Percipio Asset details to the HTML Description.
@@ -45,13 +64,24 @@ class tool_percipioexternalcontentsync_helper {
      */
     private static function get_percio_asset_description($asset) {
         $result = '';
-
-        $result .= !empty($asset->contentType->displayLabel) ? 'Type: '.$asset->contentType->displayLabel.'<br/>' : '';
-        if (count($asset->by) > 0) {
-            $result .= 'By: '.implode(', ', $asset->by ).'<br/>';
-        }
+        $result .= 'Language: '.$asset->localeCodes[0].'<br/>';
+        $result .= !empty($asset->contentType->displayLabel) ?
+                        'Type: '.$asset->contentType->displayLabel.'<br/>' : '';
+        $result .= count($asset->by) > 0 ?
+                        'Author: '.implode(', ', $asset->by ).'<br/>' : '';
+        $result .= !empty($asset->publication->publisher) ?
+                        'Publisher: '.$asset->publication->publisher.'<br/>' : '';
+        $result .= !empty($asset->publication->copyrightYear) ?
+                        'Copyright: '.$asset->publication->copyrightYear.'<br/>' : '';
+        $result .= !empty($asset->publication->isbn) ?
+                        'ISBN: '.$asset->publication->isbn.'<br/>' : '';
         $result .= !empty($asset->localizedMetadata[0]->description) ?
-                        '<br/>'.$asset->localizedMetadata[0]->description.'<br/>' : '';
+                        '<br/>'.$asset->localizedMetadata[0]->description.'<br/>' : '<br/>';
+        if (count($asset->learningObjectives) > 0) {
+            $result .= 'Learning Objectives:<br/>';
+            $result .= self::get_percio_asset_learning_objectives($asset);
+            $result .= '<br/>';
+        }
         return $result;
     }
 
@@ -139,6 +169,13 @@ class tool_percipioexternalcontentsync_helper {
         if (strtolower($asset->contentType->percipioType) == 'channel'
             || strtolower($asset->contentType->percipioType) == 'journey') {
             $tagsarry[] = $asset->localizedMetadata[0]->title;
+        } else {
+            if (isset($asset->associations->channels) && count($asset->associations->channels) > 0) {
+                $tagsarry = array_merge($tagsarry, array_column($asset->associations->channels, 'title'));
+            }
+            if (isset($asset->associations->journeys) && count($asset->associations->journeys) > 0) {
+                $tagsarry = array_merge($tagsarry, array_column($asset->associations->journeys, 'title'));
+            }
         }
 
         if (count($asset->keywords) > 0) {
@@ -428,11 +465,11 @@ class tool_percipioexternalcontentsync_helper {
         // Handle null id by selecting the first non zero category id.
         if (is_null($id)) {
             if (method_exists('\core_course_category', 'create')) {
-                $id = core_course_category::get_default()->id;
+                $id = \core_course_category::get_default()->id;
                 return $id;
             } else {
                 require_once($CFG->libdir . '/coursecatlib.php');
-                $id = coursecat::get_default()->id;
+                $id = \coursecat::get_default()->id;
                 return $id;
             }
             return null;
@@ -475,10 +512,10 @@ class tool_percipioexternalcontentsync_helper {
                     $category->idnumber = $record->course_categoryidnumber;
 
                     if (method_exists('\core_course_category', 'create')) {
-                        $createdcategory = core_course_category::create($category);
+                        $createdcategory = \core_course_category::create($category);
                     } else {
                         require_once($CFG->libdir . '/coursecatlib.php');
-                        $createdcategory = coursecat::create($category);
+                        $createdcategory = \coursecat::create($category);
                     }
                     $categoryid = $createdcategory->id;
                 }
@@ -498,8 +535,8 @@ class tool_percipioexternalcontentsync_helper {
 
         $params = array('idnumber' => $courseidnumber);
         if ($course = $DB->get_record('course', $params)) {
-            $tags = core_tag_tag::get_item_tags_array('core', 'course', $course->id,
-                                        core_tag_tag::BOTH_STANDARD_AND_NOT, 0, false);
+            $tags = \core_tag_tag::get_item_tags_array('core', 'course', $course->id,
+                                        \core_tag_tag::BOTH_STANDARD_AND_NOT, 0, false);
             $course->tags = array();
             foreach ($tags as $value) {
                 array_push($course->tags, $value);
@@ -675,7 +712,7 @@ class tool_percipioexternalcontentsync_helper {
      * @return void
      */
     public static function update_course_completion_criteria($course, $cm) {
-        $criterion = new completion_criteria_activity();
+        $criterion = new \completion_criteria_activity();
 
         $params = array('id' => $course->id, 'criteria_activity' => array($cm->id => 1));
         if ($criterion->fetch($params)) {
@@ -695,19 +732,19 @@ class tool_percipioexternalcontentsync_helper {
             'method' => COMPLETION_AGGREGATION_ALL
         );
 
-        $aggregation = new completion_aggregation($aggdata);
+        $aggregation = new \completion_aggregation($aggdata);
         $aggregation->save();
 
         $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_ACTIVITY;
-        $aggregation = new completion_aggregation($aggdata);
+        $aggregation = new \completion_aggregation($aggdata);
         $aggregation->save();
 
         $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_COURSE;
-        $aggregation = new completion_aggregation($aggdata);
+        $aggregation = new \completion_aggregation($aggdata);
         $aggregation->save();
 
         $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_ROLE;
-        $aggregation = new completion_aggregation($aggdata);
+        $aggregation = new \completion_aggregation($aggdata);
         $aggregation->save();
     }
 
@@ -734,7 +771,7 @@ class tool_percipioexternalcontentsync_helper {
         $filetypesutil = new \core_form\filetypes_util();
         $whitelist = $filetypesutil->normalize_file_types($overviewfilesoptions['accepted_types']);
 
-        $parsedurl = new moodle_url($url);
+        $parsedurl = new \moodle_url($url);
 
         $ext = pathinfo($parsedurl->get_path(), PATHINFO_EXTENSION);
         $filename = 'thumbnail.'.$ext;
