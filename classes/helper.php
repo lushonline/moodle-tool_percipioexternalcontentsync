@@ -214,8 +214,8 @@ class helper {
         if (property_exists($extcontdefaults, 'printintro')) {
             $record->external_printintro = $extcontdefaults->printintro;
         }
-        if (property_exists($extcontdefaults, 'printlastmodifie')) {
-            $record->external_printlastmodified = $extcontdefaults->printlastmodifies;
+        if (property_exists($extcontdefaults, 'printlastmodified')) {
+            $record->external_printlastmodified = $extcontdefaults->printlastmodified;
         }
 
         // Lookup the parent category information.
