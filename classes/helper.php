@@ -233,7 +233,7 @@ class helper {
         $record->course_fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->course_summary = $description;
         $record->course_tags = $tags;
-        $record->course_visible = $asset->lifecycle->status = 'ACTIVE' ? 1 : 0;
+        $record->course_visible = strlower($asset->lifecycle->status) === 'ACTIVE' ? 1 : 0;
         $record->course_thumbnail = $asset->imageUrl;
         $record->course_categoryidnumber = $categoryinfo->categoryidnumber;
         $record->course_categoryname = $categoryinfo->categoryname;
