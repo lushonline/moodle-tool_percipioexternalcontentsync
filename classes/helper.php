@@ -233,14 +233,14 @@ class helper {
         $record->course_fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->course_summary = $description;
         $record->course_tags = $tags;
-        $record->course_visible = strtolower($asset->lifecycle->status) === 'ACTIVE' ? 1 : 0;
+        $record->course_visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
         $record->course_thumbnail = $asset->imageUrl;
         $record->course_categoryidnumber = $categoryinfo->categoryidnumber;
         $record->course_categoryname = $categoryinfo->categoryname;
         $record->external_name = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->external_intro = $description;
         $record->external_content = $externalcontent;
-        $record->external_markcompleteexternally = strtolower($asset->contentType->percipioType) !== 'channel' ? 1 : 0;
+        $record->external_markcompleteexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
 
         return $record;
     }
@@ -270,8 +270,6 @@ class helper {
         $result->courseid = null;
         $result->activityid = null;
 
-        $coursecreatedmsg = get_string('statuscoursecreated', 'tool_percipioexternalcontentsync');
-        $courseupdatedmsg = get_string('statuscourseupdated', 'tool_percipioexternalcontentsync');
         $coursenotupdatedmsg = get_string('statuscoursenotupdated', 'tool_percipioexternalcontentsync');
         $extcreatedmsg = get_string('statusextcreated', 'tool_percipioexternalcontentsync');
         $extupdatedmsg = get_string('statusextupdated', 'tool_percipioexternalcontentsync');
@@ -338,7 +336,11 @@ class helper {
                     // Course or external content differs so we need to update.
                     if ($updatecourse) {
                         update_course($mergedcourse);
-                        $result->coursestatus = $courseupdatedmsg;
+                        $result->coursestatus = get_string(
+                            'statuscourseupdated',
+                            'tool_percipioexternalcontentsync',
+                            $mergedcourse->visible
+                        );
                     }
 
                     if ($addactivity) {
@@ -369,7 +371,11 @@ class helper {
                 $newcourse = create_course($course);
                 $result->courseid = $newcourse->id;
                 $activity->course = $newcourse->id;
-                $result->coursestatus = $coursecreatedmsg;
+                $result->coursestatus = get_string(
+                    'statuscoursecreated',
+                    'tool_percipioexternalcontentsync',
+                    $newcourse->visible
+                );
 
                 if ($record->course_thumbnail != '') {
                     if ($coursethumbnail) {
