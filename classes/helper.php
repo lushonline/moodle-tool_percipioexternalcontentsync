@@ -280,6 +280,8 @@ class helper {
         $generator = \phpunit_util::get_data_generator();
 
         if (self::validate_import_record($record)) {
+            // Set default message to course not updated.
+            $result->coursestatus = $coursenotupdatedmsg;
             $course = self::create_course_from_imported($record);
             $activity = self::create_externalcontent_from_imported($record);
 
@@ -675,16 +677,18 @@ class helper {
         $externalcontent->completionview = 1;
         $externalcontent->completionexternally = $record->external_markcompleteexternally;
 
-        // Set defaults.
+        // Set display option defaults.
+        $displayoptions = array();
         if (property_exists($record, 'external_printheading')) {
-            $externalcontent->printheading = $record->external_printheading;
+            $displayoptions['printheading'] = $record->external_printheading;
         }
         if (property_exists($record, 'external_printintro')) {
-            $externalcontent->printintro = $record->external_printintro;
+            $displayoptions['printintro']   = $record->external_printintro;
         }
         if (property_exists($record, 'external_printlastmodified')) {
-            $externalcontent->printlastmodified = $record->external_printlastmodified;
+            $displayoptions['printlastmodified'] = $record->external_printintro;
         }
+        $externalcontent->displayoptions = serialize($displayoptions);
 
         return $externalcontent;
     }
@@ -703,6 +707,9 @@ class helper {
         $result->intro = $imported->intro;
         $result->content = $imported->content;
         $result->completionexternally = clean_param($imported->completionexternally, PARAM_BOOL);
+
+        // Set display option defaults.
+        $result->displayoptions = $imported->displayoptions;
 
         if ($result != $existing) {
             return $result;
