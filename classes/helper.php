@@ -233,14 +233,14 @@ class helper {
         $record->course_fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->course_summary = $description;
         $record->course_tags = $tags;
-        $record->course_visible = strtolower($asset->lifecycle->status) === 'ACTIVE' ? 1 : 0;
+        $record->course_visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
         $record->course_thumbnail = $asset->imageUrl;
         $record->course_categoryidnumber = $categoryinfo->categoryidnumber;
         $record->course_categoryname = $categoryinfo->categoryname;
         $record->external_name = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->external_intro = $description;
         $record->external_content = $externalcontent;
-        $record->external_markcompleteexternally = strtolower($asset->contentType->percipioType) !== 'channel' ? 1 : 0;
+        $record->external_markcompleteexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
 
         return $record;
     }
