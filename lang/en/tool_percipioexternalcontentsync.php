@@ -81,8 +81,8 @@ $string['thumbnailskipped'] = 'Skipped.';
 // Importer.
 $string['invalidparentcategoryid'] = 'Parent category is invalid.';
 $string['invalidimportrecord'] = 'Invalid Import Record.';
-$string['statuscoursecreated'] = 'Created.';
-$string['statuscourseupdated'] = 'Updated.';
+$string['statuscoursecreated'] = 'Created. Visible: {$a}.';
+$string['statuscourseupdated'] = 'Updated. Visible: {$a}.';
 $string['statuscoursenotupdated'] = 'Not Updated.';
 $string['statusextcreated'] = 'Created.';
 $string['statusextupdated'] = 'Updated.';
