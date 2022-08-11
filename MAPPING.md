@@ -65,7 +65,7 @@ This includes if defined:
 | name | This is the title in the primary locale shortened to 255 characters ```localizedMetadata[0].title```, | Cutover strategy for Dynamics 365 solutions |
 | intro | This is the output of the Mustache template when `showthumbnail=false` and `showlaunch=false` | You can view the output of the built-in template in Moodle using the [Developer Tools - Template Library](https://docs.moodle.org/400/en/Template_library) |
 | content | This is the output of the Mustache template when `showthumbnail=true` and `showlaunch=true` | You can view the output of the built-in template in Moodle using the [Developer Tools - Template Library](https://docs.moodle.org/400/en/Template_library) |
-| markcompleteexternally | This is set to 1 for all types, with one exception if `strlower($contentType->percipioType) === 'channel'` as channels do not generate a completion. | 1 |
+| markcompleteexternally | This is set to 1 for all types except Channels as channels do not generate a completion. | 1 |
 
 <br>
 <br>
