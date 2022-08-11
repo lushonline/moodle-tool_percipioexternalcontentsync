@@ -38,7 +38,7 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
  * @copyright 2019-2022 LushOnline
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class helper {}
+class helper {
 
     /**
      * Get the Mustache Template used to format the Percipio data.
