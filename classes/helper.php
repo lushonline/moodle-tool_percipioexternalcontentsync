@@ -21,7 +21,9 @@
  * @copyright  2019-2022 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 namespace tool_percipioexternalcontentsync;
+
 defined('MOODLE_INTERNAL') || die;
 
 global $CFG;
@@ -39,83 +41,87 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
 class helper {
 
     /**
-     * Convert the Percipio Asset details for learningObjectives to HTML unordered list
+     * Get the Mustache Template used to format the Percipio data.
      *
-     * @param object $asset The asset we recieved from Percipio
-     * @return string The asset converted to a HTML formatted description
+     * @return string The Mustache Template uploaded in settings, the default from templates folder or false if not found
      */
-    private static function get_percio_asset_learning_objectives($asset) {
-        $result = '';
+    private static function get_template() {
+        global $CFG;
+        require_once($CFG->libdir . '/filelib.php');
 
-        $result .= '<ul>';
-        foreach ($asset->learningObjectives as $value) {
-            $result .= '<li>'.$value.'</li>';
+        $syscontext = \context_system::instance();
+
+        $fs = get_file_storage();
+        // Templates are those configured as a site administration setting to be available for new uses.
+        $currenttemplates = $fs->get_area_files($syscontext->id,
+                        'tool_percipioexternalcontentsync', 'templatefiles',
+                        0, 'filename', false);
+
+        if (count($currenttemplates) > 0) {
+            $template = array_shift($currenttemplates);
+            return $template->get_content();
         }
-        $result .= '</ul>';
-        return $result;
+
+        $template = \core\output\mustache_template_finder::get_template_filepath('tool_percipioexternalcontentsync/content');
+        return file_get_contents($template);
     }
 
-
     /**
-     * Convert the Percipio Asset details to the HTML Description.
+     * Process the Percipio data and return the formatted HTML. This uses either the default template or the one
+     * uploaded in the settings.
      *
-     * @param object $asset The asset we recieved from Percipio
-     * @return string The asset converted to a HTML formatted description
+     * @param  mixed $asset
+     * @param  mixed $showthumbnail
+     * @param  mixed $showlaunch
+     * @return string The formatted HTML
      */
-    private static function get_percio_asset_description($asset) {
-        $result = '';
-        $result .= 'Language: '.$asset->localeCodes[0].'<br/>';
-        $result .= !empty($asset->contentType->displayLabel) ?
-                        'Type: '.$asset->contentType->displayLabel.'<br/>' : '';
-        $result .= count($asset->by) > 0 ?
-                        'Author: '.implode(', ', $asset->by ).'<br/>' : '';
-        $result .= !empty($asset->publication->publisher) ?
-                        'Publisher: '.$asset->publication->publisher.'<br/>' : '';
-        $result .= !empty($asset->publication->copyrightYear) ?
-                        'Copyright: '.$asset->publication->copyrightYear.'<br/>' : '';
-        $result .= !empty($asset->publication->isbn) ?
-                        'ISBN: '.$asset->publication->isbn.'<br/>' : '';
-        $result .= !empty($asset->localizedMetadata[0]->description) ?
-                        '<br/>'.$asset->localizedMetadata[0]->description.'<br/>' : '<br/>';
-        if (count($asset->learningObjectives) > 0) {
-            $result .= 'Learning Objectives:<br/>';
-            $result .= self::get_percio_asset_learning_objectives($asset);
-            $result .= '<br/>';
+    private static function get_percipio_description($asset, $showthumbnail = false, $showlaunch = false) {
+        global $OUTPUT;
+
+        // Create the pre-processed values.
+        $percipioformatted = new \stdClass;
+        $percipioformatted->duration = '';
+        $percipioformatted->language = '';
+        $percipioformatted->region = '';
+
+        // Convert ISO8601 duration to human readable format in HH:MM:SS.
+        if (isset($asset->duration) === true && $asset->duration !== '') {
+            try {
+                $durationinterval = new \DateInterval($asset->duration);
+                $percipioformatted->duration = $durationinterval->format('%H:%I:%S');
+            } catch (\Exception $e) {
+                $percipioformatted->duration = '';
+            }
         }
+
+        // Convert RFC5646 locale to human readable values of language and region.
+        if (isset($asset->localeCodes[0]) === true && $asset->localeCodes[0] !== '') {
+            try {
+                $percipioformatted->language = locale_get_display_language($asset->localeCodes[0], $asset->localeCodes[0]);
+                $percipioformatted->region = locale_get_display_region($asset->localeCodes[0], $asset->localeCodes[0]);
+            } catch (\Exception $e) {
+                $percipioformatted->language = '';
+                $percipioformatted->region = '';
+            }
+        }
+
+        $data = new \stdClass;
+        $data->percipio = $asset;
+        $data->percipioformatted = $percipioformatted;
+        $data->showthumbnail = $showthumbnail;
+        $data->showlaunch = $showlaunch;
+
+        $data->hasby = isset($asset->by) && count($asset->by) > 0;
+        $data->hasobjectives = isset($asset->learningObjectives) && count($asset->learningObjectives) > 0;
+
+        if ($contents = self::get_template()) {
+            $mustache = new \core\output\mustache_engine();
+            $result = $mustache->render($contents, $data);
+        }
+
         return $result;
     }
 
-
-    /**
-     * Convert the Percipio Asset details to the HTML Description Thumbnail.
-     *
-     * @param object $asset The asset we recieved from Percipio
-     * @return string The asset converted to a HTML formatted description
-     */
-    private static function get_percio_asset_description_thumbnail($asset) {
-        $result = '';
-
-        $result .= '<a href="'.$asset->link.'" target="_blank">';
-        $result .= '<img src="'.$asset->imageUrl.'" alt="'.$asset->localizedMetadata[0]->title.'"';
-        $result .= ' style="max-width: 400px" class="img-responsive">';
-        $result .= '</a>';
-        return $result;
-    }
-
-    /**
-     * Convert the Percipio Asset details to the HTML Launch Link.
-     *
-     * @param object $asset The asset we recieved from Percipio
-     * @return string The asset converted to a HTML formatted description
-     */
-    private static function get_percio_asset_description_launchbutton($asset) {
-        $result = '';
-
-        $result .= '<a href="'.$asset->link.'" target="_blank" class="btn btn-primary">';
-        $result .= 'Launch';
-        $result .= '</a>';
-        return $result;
-    }
 
     /**
      * Convert the Percipio Asset details to a Category Object.
@@ -126,7 +132,7 @@ class helper {
     private static function get_percio_asset_category($asset) {
         $result = new \stdClass();
 
-        $idlookup = array (
+        $idlookup = array(
             'audiobook' => isset($asset->associations->channels[0]->id) ? $asset->associations->channels[0]->id : '',
             'book' => isset($asset->associations->channels[0]->id) ? $asset->associations->channels[0]->id : '',
             'channel' => $asset->id,
@@ -136,7 +142,7 @@ class helper {
             'journey' => $asset->id,
         );
 
-        $namelookup = array (
+        $namelookup = array(
             'audiobook' => isset($asset->associations->channels[0]->title) ? $asset->associations->channels[0]->title : '',
             'book' => isset($asset->associations->channels[0]->title) ? $asset->associations->channels[0]->title : '',
             'channel' => $asset->localizedMetadata[0]->title,
@@ -149,8 +155,8 @@ class helper {
         $idnumber = $idlookup[strtolower($asset->contentType->percipioType)] ?? null;
         $name = $namelookup[strtolower($asset->contentType->percipioType)] ?? null;
 
-        $result->categoryidnumber = !empty($idnumber) ? $idnumber.'_'.$asset->localeCodes[0] : '';
-        $result->categoryname = !empty($name) ? $name.' ['.$asset->localeCodes[0].']' : '';
+        $result->categoryidnumber = !empty($idnumber) ? $idnumber . '_' . $asset->localeCodes[0] : '';
+        $result->categoryname = !empty($name) ? $name . ' [' . $asset->localeCodes[0] . ']' : '';
         return $result;
     }
 
@@ -166,8 +172,10 @@ class helper {
         $tagsarry = array();
         $tagsarry[] = $asset->contentType->displayLabel;
 
-        if (strtolower($asset->contentType->percipioType) == 'channel'
-            || strtolower($asset->contentType->percipioType) == 'journey') {
+        if (
+            strtolower($asset->contentType->percipioType) == 'channel'
+            || strtolower($asset->contentType->percipioType) == 'journey'
+        ) {
             $tagsarry[] = $asset->localizedMetadata[0]->title;
         } else {
             if (isset($asset->associations->channels) && count($asset->associations->channels) > 0) {
@@ -222,14 +230,12 @@ class helper {
         $record->category = self::resolve_category_by_id_or_idnumber($parentcategory);
 
         $categoryinfo = self::get_percio_asset_category($asset);
-        $description = self::get_percio_asset_description($asset);
-        $thumbnail = self::get_percio_asset_description_thumbnail($asset);
-        $launch = self::get_percio_asset_description_launchbutton($asset);
-        $externalcontent = $thumbnail.'<br/><br/>'.$description.'<br/><br/>'.$launch;
+        $description = self::get_percipio_description($asset);
+        $externalcontent = self::get_percipio_description($asset, true, true);
         $tags = self::get_percio_asset_tags($asset);
 
         $record->course_idnumber = $asset->xapiActivityId;
-        $record->course_shortname = substr($asset->localizedMetadata[0]->title, 0, 215).' ('.$asset->id.')';
+        $record->course_shortname = substr($asset->localizedMetadata[0]->title, 0, 215) . ' (' . $asset->id . ')';
         $record->course_fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
         $record->course_summary = $description;
         $record->course_tags = $tags;
@@ -254,7 +260,7 @@ class helper {
      * @param bool $coursethumbnail If true, then the thumbnail for the course will downloaded and added.
      * @return object Processing information for the asset
      */
-    public static function import_percio_asset($asset, $parentcategory = null, $coursethumbnail=true) {
+    public static function import_percio_asset($asset, $parentcategory = null, $coursethumbnail = true) {
         global $DB;
 
         $record = self::percio_asset_to_externalcontentimport($asset, $parentcategory);
@@ -295,8 +301,10 @@ class helper {
 
                 if ($record->course_thumbnail != '') {
                     if ($coursethumbnail) {
-                        $response = self::add_course_thumbnail($mergedcourse->id,
-                        $record->course_thumbnail);
+                        $response = self::add_course_thumbnail(
+                            $mergedcourse->id,
+                            $record->course_thumbnail
+                        );
                         if (!$response->success) {
                             $result->warn = true;
                         }
@@ -308,8 +316,10 @@ class helper {
 
                 // Now check the externalcontent.
                 $addactivity = $updateactivity = false;
-                $existingactivity = self::get_externalcontent_by_idnumber($mergedcourse->idnumber,
-                                    $mergedcourse->id);
+                $existingactivity = self::get_externalcontent_by_idnumber(
+                    $mergedcourse->idnumber,
+                    $mergedcourse->id
+                );
 
                 if ($existingactivity) {
                     $result->activityid = $existingactivity->id;
@@ -317,8 +327,10 @@ class helper {
                     $updateactivity = true;
 
                     $mergedactivity = self::update_externalcontent_with_imported(
-                                        $existingactivity, $activity);
-                    if ( $mergedactivity === false) {
+                        $existingactivity,
+                        $activity
+                    );
+                    if ($mergedactivity === false) {
                         $updateactivity = false;
                         $addactivity = false;
                         $mergedactivity = $activity;
@@ -381,8 +393,10 @@ class helper {
 
                 if ($record->course_thumbnail != '') {
                     if ($coursethumbnail) {
-                        $response = self::add_course_thumbnail($newcourse->id,
-                                        $record->course_thumbnail);
+                        $response = self::add_course_thumbnail(
+                            $newcourse->id,
+                            $record->course_thumbnail
+                        );
                         if ($response->thumbnailfile) {
                             $newcourse->overviewfiles_filemanager = $response->thumbnailfile->get_itemid();
                         }
@@ -454,7 +468,7 @@ class helper {
      * @return int category ID.
      */
     public static function resolve_category_by_idnumber($idnumber) {
-          global $DB;
+        global $DB;
 
         $params = array('idnumber' => $idnumber);
         $id = $DB->get_field_select('course_categories', 'id', 'idnumber = :idnumber', $params, IGNORE_MISSING);
@@ -543,8 +557,14 @@ class helper {
 
         $params = array('idnumber' => $courseidnumber);
         if ($course = $DB->get_record('course', $params)) {
-            $tags = \core_tag_tag::get_item_tags_array('core', 'course', $course->id,
-                                        \core_tag_tag::BOTH_STANDARD_AND_NOT, 0, false);
+            $tags = \core_tag_tag::get_item_tags_array(
+                'core',
+                'course',
+                $course->id,
+                \core_tag_tag::BOTH_STANDARD_AND_NOT,
+                0,
+                false
+            );
             $course->tags = array();
             foreach ($tags as $value) {
                 array_push($course->tags, $value);
@@ -560,7 +580,7 @@ class helper {
      * @param string $tagdelimiter The value to use to split the delimited $record->course_tags string
      * @return object course or null
      */
-    public static function create_course_from_imported($record, $tagdelimiter="|") {
+    public static function create_course_from_imported($record, $tagdelimiter = "|") {
         $course = new \stdClass();
         $course->idnumber = $record->course_idnumber;
         $course->shortname = $record->course_shortname;
@@ -787,7 +807,7 @@ class helper {
         $parsedurl = new \moodle_url($url);
 
         $ext = pathinfo($parsedurl->get_path(), PATHINFO_EXTENSION);
-        $filename = 'thumbnail.'.$ext;
+        $filename = 'thumbnail.' . $ext;
 
         // Check the extension is valid.
         if (!$filetypesutil->is_allowed_file_type($filename, $whitelist)) {
@@ -815,7 +835,8 @@ class helper {
             }
         }
 
-        $thumbnailfilerecord = array('contextid' => $coursecontext->id,
+        $thumbnailfilerecord = array(
+            'contextid' => $coursecontext->id,
             'component' => 'course',
             'filearea' => 'overviewfiles',
             'itemid' => '0',
