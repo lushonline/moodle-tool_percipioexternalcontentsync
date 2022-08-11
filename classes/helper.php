@@ -53,7 +53,7 @@ class helper {
 
         $fs = get_file_storage();
         // Templates are those configured as a site administration setting to be available for new uses.
-        $currenttemplates = $fs->get_area_files($syscontext->id, 
+        $currenttemplates = $fs->get_area_files($syscontext->id,
                         'tool_percipioexternalcontentsync', 'templatefiles',
                         0, 'filename', false);
 
