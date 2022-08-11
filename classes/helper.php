@@ -38,17 +38,14 @@ require_once($CFG->libdir . '/phpunit/classes/util.php');
  * @copyright 2019-2022 LushOnline
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class helper
-{
-
+class helper {}
 
     /**
      * Get the Mustache Template used to format the Percipio data.
      *
      * @return string The Mustache Template uploaded in settings, the default from templates folder or false if not found
      */
-    private static function get_template()
-    {
+    private static function get_template() {
         global $CFG;
         require_once($CFG->libdir . '/filelib.php');
 
@@ -56,7 +53,9 @@ class helper
 
         $fs = get_file_storage();
         // Templates are those configured as a site administration setting to be available for new uses.
-        $currenttemplates = $fs->get_area_files($syscontext->id, 'tool_percipioexternalcontentsync', 'templatefiles', 0, 'filename', false);
+        $currenttemplates = $fs->get_area_files($syscontext->id, 
+                        'tool_percipioexternalcontentsync', 'templatefiles',
+                        0, 'filename', false);
 
         if (count($currenttemplates) > 0) {
             $template = array_shift($currenttemplates);
@@ -76,8 +75,7 @@ class helper
      * @param  mixed $showlaunch
      * @return string The formatted HTML
      */
-    private static function get_percipio_description($asset, $showthumbnail = false, $showlaunch = false)
-    {
+    private static function get_percipio_description($asset, $showthumbnail = false, $showlaunch = false) {
         global $OUTPUT;
 
         // Create the pre-processed values.
@@ -107,7 +105,6 @@ class helper
             }
         }
 
-
         $data = new \stdClass;
         $data->percipio = $asset;
         $data->percipioformatted = $percipioformatted;
@@ -116,7 +113,6 @@ class helper
 
         $data->hasby = isset($asset->by) && count($asset->by) > 0;
         $data->hasobjectives = isset($asset->learningObjectives) && count($asset->learningObjectives) > 0;
-
 
         if ($contents = self::get_template()) {
             $mustache = new \core\output\mustache_engine();
@@ -133,8 +129,7 @@ class helper
      * @param object $asset The asset we recieved from Percipio
      * @return object The asset converted to the Catagory information for External Content
      */
-    private static function get_percio_asset_category($asset)
-    {
+    private static function get_percio_asset_category($asset) {
         $result = new \stdClass();
 
         $idlookup = array(
@@ -171,8 +166,7 @@ class helper
      * @param object $asset The asset we recieved from Percipio
      * @return string The asset converted to a pipe delimited list of tags for External Content
      */
-    private static function get_percio_asset_tags($asset)
-    {
+    private static function get_percio_asset_tags($asset) {
         $result = '';
 
         $tagsarry = array();
@@ -215,8 +209,7 @@ class helper
      * @param string $parentcategory The parentcategory name or id
      * @return object The asset converted to an import record for External Content
      */
-    public static function percio_asset_to_externalcontentimport($asset, $parentcategory = null)
-    {
+    public static function percio_asset_to_externalcontentimport($asset, $parentcategory = null) {
         // Retrieve the External Content defaults.
         $extcontdefaults = get_config('externalcontent');
 
@@ -267,8 +260,7 @@ class helper
      * @param bool $coursethumbnail If true, then the thumbnail for the course will downloaded and added.
      * @return object Processing information for the asset
      */
-    public static function import_percio_asset($asset, $parentcategory = null, $coursethumbnail = true)
-    {
+    public static function import_percio_asset($asset, $parentcategory = null, $coursethumbnail = true) {
         global $DB;
 
         $record = self::percio_asset_to_externalcontentimport($asset, $parentcategory);
@@ -449,8 +441,7 @@ class helper
      * @param object $record The record we imported
      * @return bool true if validated
      */
-    public static function validate_import_record($record)
-    {
+    public static function validate_import_record($record) {
         // As a minimum we need.
         // course idnumber.
         // course shortname.
@@ -476,8 +467,7 @@ class helper
      * @param string $idnumber category IDnumber.
      * @return int category ID.
      */
-    public static function resolve_category_by_idnumber($idnumber)
-    {
+    public static function resolve_category_by_idnumber($idnumber) {
         global $DB;
 
         $params = array('idnumber' => $idnumber);
@@ -491,8 +481,7 @@ class helper
      * @param string $id category ID.
      * @return int category ID.
      */
-    public static function resolve_category_by_id_or_idnumber($id)
-    {
+    public static function resolve_category_by_id_or_idnumber($id) {
         global $CFG, $DB;
 
         // Handle null id by selecting the first non zero category id.
@@ -531,8 +520,7 @@ class helper
      * @param object $record Validated Imported Record
      * @return int The category id
      */
-    public static function get_or_create_category_from_import_record($record)
-    {
+    public static function get_or_create_category_from_import_record($record) {
         global $CFG;
         $categoryid = $record->category;
 
@@ -564,8 +552,7 @@ class helper
      * @param string $courseidnumber course idnumber
      * @return object course or null
      */
-    public static function get_course_by_idnumber($courseidnumber)
-    {
+    public static function get_course_by_idnumber($courseidnumber) {
         global $DB;
 
         $params = array('idnumber' => $courseidnumber);
@@ -593,8 +580,7 @@ class helper
      * @param string $tagdelimiter The value to use to split the delimited $record->course_tags string
      * @return object course or null
      */
-    public static function create_course_from_imported($record, $tagdelimiter = "|")
-    {
+    public static function create_course_from_imported($record, $tagdelimiter = "|") {
         $course = new \stdClass();
         $course->idnumber = $record->course_idnumber;
         $course->shortname = $record->course_shortname;
@@ -633,8 +619,7 @@ class helper
      * @param object $imported  Course Record for imported course
      * @return object course or FALSE if no changes
      */
-    public static function update_course_with_imported($existing, $imported)
-    {
+    public static function update_course_with_imported($existing, $imported) {
         // Sort the tags arrays.
         sort($existing->tags);
         sort($imported->tags);
@@ -665,8 +650,7 @@ class helper
      * @param string $courseid course identifier
      * @return object externalcontent.
      */
-    public static function get_externalcontent_by_name($name, $courseid)
-    {
+    public static function get_externalcontent_by_name($name, $courseid) {
         global $DB;
 
         $params = array('name' => $name, 'course' => $courseid);
@@ -680,8 +664,7 @@ class helper
      * @param string $courseid course identifier
      * @return object externalcontent.
      */
-    public static function get_externalcontent_by_idnumber($idnumber, $courseid)
-    {
+    public static function get_externalcontent_by_idnumber($idnumber, $courseid) {
         global $DB;
 
         $params = array('idnumber' => $idnumber, 'course' => $courseid);
@@ -701,8 +684,7 @@ class helper
      * @param object $record Validated Imported Record
      * @return object course or null
      */
-    public static function create_externalcontent_from_imported($record)
-    {
+    public static function create_externalcontent_from_imported($record) {
         // All data provided by the data generator.
         $externalcontent = new \stdClass();
         $externalcontent->name = $record->external_name;
@@ -738,8 +720,7 @@ class helper
      * @param object $imported  page Record for imported page
      * @return object page or FALSE if no changes
      */
-    public static function update_externalcontent_with_imported($existing, $imported)
-    {
+    public static function update_externalcontent_with_imported($existing, $imported) {
         $result = clone $existing;
 
         $result->name = $imported->name;
@@ -763,8 +744,7 @@ class helper
      * @param object $cm Course Module Object for the Single Page
      * @return void
      */
-    public static function update_course_completion_criteria($course, $cm)
-    {
+    public static function update_course_completion_criteria($course, $cm) {
         $criterion = new \completion_criteria_activity();
 
         $params = array('id' => $course->id, 'criteria_activity' => array($cm->id => 1));
@@ -809,8 +789,7 @@ class helper
      * @param  string $url
      * @return object Object containing a status string and a stored_file object or null
      */
-    public static function add_course_thumbnail($courseid, $url)
-    {
+    public static function add_course_thumbnail($courseid, $url) {
         global $CFG;
 
         $response = new \stdClass();
