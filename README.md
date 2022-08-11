@@ -56,44 +56,67 @@ To use this plugin you will need:
 
 3. Configure the plugin.
 
-
 ## Configuration
+
 The following configuration settings need to be set in Moodle.
 
-| Name | Setting | Description |
-| ---- | ------- | ----------- |
-| Percipio Base URL | baseurl  | This is the base URL for accessing the Percipio API. See [Skillsoft Documentation](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm), this should be either https://api.percipio.com or https://dew1-api.percipio.com. The Skillsoft Team will provide this information. |
-| Percipio OrgId  | orgid  | This is a UUID that is unique to the Percipio Site. The Skillsoft Team will provide this information. |
-| Percipio Bearer | bearer | The Percipio API uses a Bearer token for authentication. This should be the unique bearer token created for you to use. The Skillsoft Team will provide this information. |
-| Return assets updated since | updatedsice | This ISO8601 date time (yyyy-mm-ddTHH:MM:SSZ) is passed to the API to determine the assets to return based on when they were updated on Percipio. For example to get all the assets since December 20th 2021 at 10:00:00 UTC you would enter 2022-12-20T10:00:00Z. If left blank all items are returned. After successful sync the value is set to the time of the sync. |
-| Max assets per request | max | The Percipio API returns a paged data set of assets. This controls the number returned for each page. The default and maximum is 1000. |
-| Parent Category | category | When the assets are added to Moodle, sub-categories will be created automatically. This configures the parent category to create them under. |
-| Course thumbnail | coursethumbnail | The Percipio asset contains a URL to a thumbnail image. This setting controls whether this thumbnail is downloaded and added to the Moodle Course. If this is not selected the time taken to sync a lot of assets is reduced. |
-
+| Name                        | Setting         | Description                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Percipio Base URL           | baseurl         | This is the base URL for accessing the Percipio API. See [Skillsoft Documentation](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm), this should be either https://api.percipio.com or https://dew1-api.percipio.com. The Skillsoft Team will provide this information.                                                                   |
+| Percipio OrgId              | orgid           | This is a UUID that is unique to the Percipio Site. The Skillsoft Team will provide this information.                                                                                                                                                                                                                                                                    |
+| Percipio Bearer             | bearer          | The Percipio API uses a Bearer token for authentication. This should be the unique bearer token created for you to use. The Skillsoft Team will provide this information.                                                                                                                                                                                                |
+| Return assets updated since | updatedsice     | This ISO8601 date time (yyyy-mm-ddTHH:MM:SSZ) is passed to the API to determine the assets to return based on when they were updated on Percipio. For example to get all the assets since December 20th 2021 at 10:00:00 UTC you would enter 2022-12-20T10:00:00Z. If left blank all items are returned. After successful sync the value is set to the time of the sync. |
+| Max assets per request      | max             | The Percipio API returns a paged data set of assets. This controls the number returned for each page. The default and maximum is 1000.                                                                                                                                                                                                                                   |
+| Parent Category             | category        | When the assets are added to Moodle, sub-categories will be created automatically. This configures the parent category to create them under.                                                                                                                                                                                                                             |
+| Course thumbnail            | coursethumbnail | The Percipio asset contains a URL to a thumbnail image. This setting controls whether this thumbnail is downloaded and added to the Moodle Course. If this is not selected the time taken to sync a lot of assets is reduced.                                                                                                                                            |
+| Mustache teamplate          | templatefile    | The Percipio asset is formatted using a Mustache template to produce the course and external content description in HTML, and the HTML for the _content_ property. There is a default template configured in `templates/content.mustache`, you can copy and edit this template and then upload it here to change the HTML produced.                                      |
 
 The scheduled task is configured to run at 03am every day.
 
 ## How it works
+
 When the task runs the process is:
 
 1. Send Percipio API request using **updatedSince** value.
 1. Percipio API will return a JSON response with **max** assets, and headers to indicate total assets to be returned.
 1. Plugin will process the returned JSON array of assets and take following actions for each:
-   1. If the Category for the asset is not null, check if the Category exists under the Parent Category configured. If it does not exist create a new category under the parent.   
-   1. Lookup Moodle Course where ID Number matches xapiActivityID from Percipio
-   1. Course does not exist create it, if it exists update if the Percipio assets is no longer active make it inactive.
-   1. If the category is not empty, move the course to the category. If it is empty move the course to the parent category.
-   1. Lookup Moodle External Content Activity for Course where ID Number matches xapiActivityID from Percipio
-   1. External Content Activity does not exist create it, if it exists update if the Percipio assets is no longer active make it inactive.
-   1. If **coursethumbail** is enabled, add the thumbnail URL to the Moodle Course. Moodle will download the image from the URL.
-1. If the JSON response indicates there are more assets to download go back to Step 2.
 
+   1. Process the asset metadata using the selected Mustache template, either default of the custom uploaded to create a Course and External Content Activity.
+
+   1. Check Category for the asset is not null.
+
+      1. Category exists under the Parent Category configured, skip.
+      1. Category does not exist under the Parent Category configured, create a new category under the parent.
+
+   1. Lookup up Course using Moodle Course `ID Number` matches xapiActivityID from Percipio
+      1. Course does not exist create it
+      1. Course exists and the properties in Moodle are the same as from Percipio, skip.
+      1. Course exists and the properties in Moodle are not the same as from Percipio, update the course overwriting values in Moodle.
+         1. If the Percipio assets is no longer active the course is hidden.
+      1. If the category is not empty, move the course to the category. If it is empty move the course to the parent category.
+   1. Lookup Moodle External Content Activity where activity `ID Number` matches xapiActivityID from Percipio
+      1. External Content Activity does not exist create it
+      1. External Content Activity exists and the properties in Moodle are the same as from Percipio, skip.
+      1. External Content Activity exists and the properties in Moodle are not the same as from Percipio, update the activity overwriting values in Moodle.
+   1. Check Course Thumbnail, if **coursethumbail** setting is enabled.
+      1. Course does not have thumbnail image, add the thumbnail URL and Moodle will download the image.
+      1. Course has thumbnail image, and the thumbnail URL in Moodle is the same as from Percipio, skip.
+      1. Course has thumbnail image, and the thumbnail URL in Moodle is not the same as from Percipio add the new thumbnail URL and Moodle will download the image.
+
+1. If the JSON response indicates there are more assets to download go back to Step 2.
 
 **IMPORTANT: The first time the task runs it can take a number of hours, as Percipio can have upwards of 40,000 assets.**
 
-
 ## More Details
+
 For more information for how Percipio asset data is mapped to Course and External Content Activities see the [MAPPING](MAPPING.md)
+
+## Mustache Template
+
+The `templates/content.mustache` is used to populate:
+
+- Course and External Content Descriptions - the template is passed `showthumbnail=false` and `showlaunch=false`
+- External Content Content - the template is passed `showthumbnail=true` and `showlaunch=true`, this ensures a hyperlinked image and launch button are included.
 
 ## License
 
@@ -110,4 +133,3 @@ PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
-

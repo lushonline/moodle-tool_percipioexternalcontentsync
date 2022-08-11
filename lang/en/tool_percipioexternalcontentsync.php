@@ -49,6 +49,10 @@ $string['coursethumbnaildesc'] = 'Download the thumbnail image for the course?';
 $string['coursecategory'] = 'Parent Category';
 $string['coursecategorydesc'] = 'This setting determines the parent category under which any new categories are created.';
 
+$string['templatefileheader'] = 'Alternative template settings';
+$string['templatefile'] = 'Mustache template';
+$string['templatefileexplain'] = 'This setting is the uploaded mustache template to use to format the Percipio data, instead of the default template.';
+
 // APIClient.
 $string['errornocategory'] = 'No Category has been set, please configure plugin';
 $string['errornobaseurl'] = 'No Base URL has been set, please configure plugin';
