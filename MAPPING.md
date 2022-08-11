@@ -15,6 +15,7 @@ You can change the values used for the Course ```summary```, and External Conten
 - [Category](#category)
 - [Course](#course)
 - [External Content](#external-content)
+- [Mustache Template](#mustache-template)
 
 ## Category
 <br>
@@ -77,8 +78,7 @@ As well as passing Percipio JSON to the template, a number of extra data values 
 
 | Mustache Data | Comment | Example Value |
 | ---- |  ----------- |----------- |
-| percipioformatted.duration | Convert the ISO8601 duration to hh:mm:ss. An example Percipio ```duration``` 
-is PT01H04M32S | 01:04:32 |
+| percipioformatted.duration | Convert the ISO8601 duration to hh:mm:ss. An example Percipio ```duration``` is PT01H04M32S | 01:04:32 |
 | percipioformatted.language | Convert the RFC5646 locale to human readable values of language. An example Percipio ```localeCodes[0]``` is en_US  | English |
 | percipioformatted.region | Convert the RFC5646 locale to human readable values of region. An example Percipio ```localeCodes[0]``` is en_US  | United States |
 | showthumbnail | Boolean value to indicate we should display a thumbnail in the description  |  |
