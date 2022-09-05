@@ -158,7 +158,7 @@ class helper {
     }
 
     /**
-     * Convert the Percipio Asset details to a delimited string of tags, maximum 10.
+     * Convert the Percipio Asset details to a delimited string of tags.
      *
      * @param object $asset The asset we recieved from Percipio
      * @return string The asset converted to a pipe delimited list of tags for External Content
@@ -195,7 +195,8 @@ class helper {
             $tagsarry = array_merge($tagsarry, $asset->associations->subjects);
         }
 
-        return array_map('trim', $tagsarry);
+        // Normalize the tags.
+        return \core_tag_tag::normalize($tagsarry, false);
     }
 
     /**
