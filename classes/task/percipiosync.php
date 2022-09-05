@@ -79,10 +79,10 @@ class percipiosync extends \core\task\scheduled_task {
      * @param string $updatedsince If passed, will find content since this date. Format is ISO8601.
      * @param string $max If passed, will set the number of records per request.
      * @param string $pagingrequestid If passed, will set the pagingRequestId for request.
-     * @param bool $coursethumbnail If true, then the thumbnail for the course will downloaded and added.
+     * @param bool $thumbnail If true, then the thumbnail will be processed.
      * @return array
      */
-    public function get_all_metadata($parentcategory, $updatedsince=null, $max=null, $pagingrequestid=null, $coursethumbnail=true) {
+    public function get_all_metadata($parentcategory, $updatedsince=null, $max=null, $pagingrequestid=null, $thumbnail=true) {
         $this->trace->output('Start retrieving Percipio Assets');
         if (function_exists('memory_get_usage')) {
             $this->trace->output('Memory Usage:'.display_size(memory_get_usage()));
@@ -144,30 +144,18 @@ class percipiosync extends \core\task\scheduled_task {
                 $this->trace->output('Start Processing: '.$requestcounter);
                 foreach ($assetlist as $asset) {
                     $importresult = helper::import_percio_asset($asset,
-                                                                                                  $parentcategory,
-                                                                                                  $coursethumbnail);
-                    if ($importresult->success && !$importresult->warn) {
+                                                                $parentcategory,
+                                                                $thumbnail);
+                    if ($importresult->success) {
                         $this->trace->output('SUCCESS.'.
                                              ' Course ID: '.$importresult->courseid.
-                                             ' Activity ID: '.$importresult->activityid.
-                                             ' Actions: Course '.$importresult->coursestatus.
-                                             ' Activity '.$importresult->externalcontentstatus.
-                                             ' Thumbnail '.$importresult->thumbnailstatus);
+                                             ' Module ID: '.$importresult->moduleid.
+                                             ' Messages: '.$importresult->message);
                         $success += 1;
                     }
 
-                    if ($importresult->warn) {
-                        $this->trace->output('WARN.'.
-                                             ' Course ID: '.$importresult->courseid.
-                                             ' Activity ID: '.$importresult->activityid.
-                                             ' Actions: Course '.$importresult->coursestatus.
-                                             ' Activity '.$importresult->externalcontentstatus.
-                                             ' Thumbnail '.$importresult->thumbnailstatus);
-                        $warn += 1;
-                    }
-
                     if (!$importresult->success) {
-                        $this->trace->output('FAILED. '.$importresult->courseshortname.' Err: '.$importresult->error);
+                        $this->trace->output('FAILED. '.$importresult->message);
                         $failed += 1;
                     }
 
@@ -180,7 +168,6 @@ class percipiosync extends \core\task\scheduled_task {
 
         $this->trace->output('Finished retrieving Percipio Assets. Processed: '.$downloaded.
                              ' Success: '.$success.
-                             ' Warn: '.$warn.
                              ' Failed: '.$failed);
         if (function_exists('memory_get_usage')) {
             $this->trace->output('Memory Usage:'.display_size(memory_get_usage()));
