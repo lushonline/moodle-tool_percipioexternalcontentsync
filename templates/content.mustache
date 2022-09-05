@@ -154,7 +154,7 @@
         {{/showthumbnail}}
         <div class="col">
             <div><strong>Type: </strong>{{percipio.contentType.displayLabel}}</div>
-            {{#percipioformatted.language}}<div><strong>Locale: </strong>{{percipioformatted.language}} ({{percipioformatted.region}})</div>{{/percipioformatted.language}}
+            {{#percipioformatted.language}}<div><strong>Locale: </strong>{{percipioformatted.language}}{{#percipioformatted.region}} ({{percipioformatted.region}}){{/percipioformatted.region}}</div>{{/percipioformatted.language}}
             {{#percipioformatted.duration}}<div><strong>Duration (hh:mm:ss): </strong>{{percipioformatted.duration}}</div>{{/percipioformatted.duration}}
             {{#hasby}}<div><strong>Author: </strong>{{#percipio.by}}{{.}}, {{/percipio.by}}</div>{{/hasby}}
             {{#percipio.publication}}<div><strong>Publisher: </strong>{{publisher}}{{#copyrightYear}} {{.}}{{/copyrightYear}}</div>{{/percipio.publication}}
