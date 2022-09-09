@@ -160,7 +160,8 @@
             {{#percipio.publication}}<div><strong>Publisher: </strong>{{publisher}}{{#copyrightYear}} {{.}}{{/copyrightYear}}</div>{{/percipio.publication}}
             {{#percipio.publication.isbn}}<div><strong>ISBN: </strong>{{.}}</div>{{/percipio.publication.isbn}}
             {{#percipio.lifecycle}}<div><strong>Last Updated: </strong>{{lastUpdatedDate}}</div>{{/percipio.lifecycle}}
-            {{#percipio.lifecycle.plannedRetirementDate}}<div><strong>Planned Retirement: </strong>{{.}}</div>{{/percipio.lifecycle.plannedRetirementDate}}
+            {{^percipio.lifecycle.retiredDate}}{{#percipio.lifecycle.plannedRetirementDate}}<div><strong>Planned Retirement: </strong>{{.}}</div>{{/percipio.lifecycle.plannedRetirementDate}}{{/percipio.lifecycle.retiredDate}}
+            {{#percipio.lifecycle.retiredDate}}<div><strong>Retired: </strong>{{.}}</div>{{/percipio.lifecycle.retiredDate}}
         </div>
     </div>
     <div class="row p-1">
