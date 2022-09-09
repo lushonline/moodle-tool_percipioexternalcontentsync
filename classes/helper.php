@@ -378,7 +378,7 @@ class helper {
         $moduleimport->name = substr($asset->localizedMetadata[0]->title, 0, 255);
         $moduleimport->intro = self::get_percipio_description($asset);
         $moduleimport->content = self::get_percipio_description($asset, true, true);
-        $moduleimport->markcompleteexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
+        $moduleimport->completionexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
 
         // Get our importrecord.
         $importrecord = new importrecord($courseimport, $moduleimport);
@@ -409,6 +409,7 @@ class helper {
             $result->courseid = $instance->get_course_id();
             $result->moduleid = $instance->get_module_id();
             $result->message = implode(", ", $instance->get_messages());
+            $result->importrecord = $importrecord;
         } else {
             $result->success = false;
             $result->message = get_string('invalidimportrecord', 'tool_percipioexternalcontentsync');
