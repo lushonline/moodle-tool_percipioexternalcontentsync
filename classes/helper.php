@@ -109,7 +109,8 @@ class helper {
         $data->showlaunch = $showlaunch;
 
         $data->hasby = isset($asset->by) && count($asset->by) > 0;
-        $data->hasobjectives = isset($asset->learningObjectives) && count($asset->learningObjectives) > 0;
+        // Check if learningObjectives is set and there are non-blank values.
+        $data->hasobjectives = isset($asset->learningObjectives) && count(array_filter($asset->learningObjectives)) > 0;
 
         if ($contents = self::get_template()) {
             $mustache = new \core\output\mustache_engine();
