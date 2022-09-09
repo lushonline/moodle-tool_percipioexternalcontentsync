@@ -157,8 +157,23 @@ class helper {
         return $result;
     }
 
+
+    /**
+     * format_asset_tags to Moodle standard
+     * Max length of 50 and trimmed.
+     *
+     * @param  string $tag
+     * @return string
+     */
+    private static function format_asset_tags($tag) {
+        $result = substr($tag, 0, 50);
+        return trim($result);
+    }
+
+
     /**
      * Convert the Percipio Asset details to a delimited string of tags.
+     * Tags can be no longer than 50 characters in Moodle
      *
      * @param object $asset The asset we recieved from Percipio
      * @return string The asset converted to a pipe delimited list of tags for External Content
@@ -195,6 +210,8 @@ class helper {
             $tagsarry = array_merge($tagsarry, $asset->associations->subjects);
         }
 
+        // Format for Moodle.
+        $tagsarry = array_map('self::format_asset_tags', $tagsarry);
         // Normalize the tags.
         return \core_tag_tag::normalize($tagsarry, false);
     }
@@ -289,6 +306,45 @@ class helper {
         return $categoryid;
     }
 
+
+    /**
+     * sanitizeUrl
+     *
+     * @param  mixed $url
+     * @return void
+     */
+    private static function sanitizeurl($url) {
+        $parts = parse_url($url);
+
+        // Optional but we only sanitize URLs with scheme and host defined.
+        if ($parts === false || empty($parts["scheme"]) || empty($parts["host"])) {
+            return $url;
+        }
+
+        $sanitizedpath = null;
+        if (!empty($parts["path"])) {
+            $pathparts = explode("/", $parts["path"]);
+            foreach ($pathparts as $pathpart) {
+                if (empty($pathpart)) {
+                    continue;
+                }
+                // The Path part might already be urlencoded.
+                $sanitizedpath .= "/" . rawurlencode(rawurldecode($pathpart));
+            }
+        }
+
+        // Build the url.
+        $targeturl = $parts["scheme"] . "://" .
+            ((!empty($parts["user"]) && !empty($parts["pass"])) ? $parts["user"] . ":" . $parts["pass"] . "@" : "") .
+            $parts["host"] .
+            (!empty($parts["port"]) ? ":" . $parts["port"] : "") .
+            (!empty($sanitizedpath) ? $sanitizedpath : "") .
+            (!empty($parts["query"]) ? "?" . $parts["query"] : "") .
+            (!empty($parts["fragment"]) ? "#" . $parts["fragment"] : "");
+
+        return $targeturl;
+    }
+
     /**
      * Convert the Percipio Asset to an External Content importrecord.
      *
@@ -313,7 +369,7 @@ class helper {
         $courseimport->summary = self::get_percipio_description($asset);
         $courseimport->tags = self::get_percio_asset_tags($asset);
         $courseimport->visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
-        $courseimport->thumbnail = $thumbnail ? $asset->imageUrl : null;
+        $courseimport->thumbnail = $thumbnail ? self::sanitizeurl($asset->imageUrl) : null;
         $courseimport->category = $categoryid;
 
         // Create moduleimport class.
