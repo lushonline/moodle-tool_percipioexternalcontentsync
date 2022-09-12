@@ -28,6 +28,6 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->version   = 2022090500; // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2021051700; // Requires this Moodle version v3.11 see https://docs.moodle.org/dev/Releases.
 $plugin->component = 'tool_percipioexternalcontentsync'; // Full name of the plugin (used for diagnostics).
-$plugin->dependencies = ['mod_externalcontent' => 2022090500];
+$plugin->dependencies = ['mod_externalcontent' => 2022090501];
 $plugin->maturity = MATURITY_STABLE;
 $plugin->release = '2.0';
