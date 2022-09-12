@@ -24,12 +24,9 @@
 
 namespace tool_percipioexternalcontentsync;
 
-defined('MOODLE_INTERNAL') || die;
-
-global $CFG;
-require_once($CFG->libdir . '/completionlib.php');
-require_once($CFG->dirroot . '/completion/criteria/completion_criteria_activity.php');
-require_once($CFG->libdir . '/phpunit/classes/util.php');
+use mod_externalcontent\instance;
+use mod_externalcontent\importableinstance;
+use mod_externalcontent\importrecord;
 
 /**
  * Class containing a set of helpers.
@@ -112,7 +109,8 @@ class helper {
         $data->showlaunch = $showlaunch;
 
         $data->hasby = isset($asset->by) && count($asset->by) > 0;
-        $data->hasobjectives = isset($asset->learningObjectives) && count($asset->learningObjectives) > 0;
+        // Check if learningObjectives is set and there are non-blank values.
+        $data->hasobjectives = isset($asset->learningObjectives) && count(array_filter($asset->learningObjectives)) > 0;
 
         if ($contents = self::get_template()) {
             $mustache = new \core\output\mustache_engine();
@@ -160,8 +158,23 @@ class helper {
         return $result;
     }
 
+
     /**
-     * Convert the Percipio Asset details to a delimited string of tags, maximum 10.
+     * format_asset_tags to Moodle standard
+     * Max length of 50 and trimmed.
+     *
+     * @param  string $tag
+     * @return string
+     */
+    private static function format_asset_tags($tag) {
+        $result = substr($tag, 0, 50);
+        return trim($result);
+    }
+
+
+    /**
+     * Convert the Percipio Asset details to a delimited string of tags.
+     * Tags can be no longer than 50 characters in Moodle
      *
      * @param object $asset The asset we recieved from Percipio
      * @return string The asset converted to a pipe delimited list of tags for External Content
@@ -198,267 +211,10 @@ class helper {
             $tagsarry = array_merge($tagsarry, $asset->associations->subjects);
         }
 
-        $result = implode('|', array_map('trim', $tagsarry));
-        return $result;
-    }
-
-    /**
-     * Convert the Percipio Asset to a External Content Activity Import record.
-     *
-     * @param object $asset The asset we recieved from Percipio
-     * @param string $parentcategory The parentcategory name or id
-     * @return object The asset converted to an import record for External Content
-     */
-    public static function percio_asset_to_externalcontentimport($asset, $parentcategory = null) {
-        // Retrieve the External Content defaults.
-        $extcontdefaults = get_config('externalcontent');
-
-        $record = new \stdClass();
-
-        // Set defaults.
-        if (property_exists($extcontdefaults, 'printheading')) {
-            $record->external_printheading = $extcontdefaults->printheading;
-        }
-        if (property_exists($extcontdefaults, 'printintro')) {
-            $record->external_printintro = $extcontdefaults->printintro;
-        }
-        if (property_exists($extcontdefaults, 'printlastmodified')) {
-            $record->external_printlastmodified = $extcontdefaults->printlastmodified;
-        }
-
-        // Lookup the parent category information.
-        $record->category = self::resolve_category_by_id_or_idnumber($parentcategory);
-
-        $categoryinfo = self::get_percio_asset_category($asset);
-        $description = self::get_percipio_description($asset);
-        $externalcontent = self::get_percipio_description($asset, true, true);
-        $tags = self::get_percio_asset_tags($asset);
-
-        $record->course_idnumber = $asset->xapiActivityId;
-        $record->course_shortname = substr($asset->localizedMetadata[0]->title, 0, 215) . ' (' . $asset->id . ')';
-        $record->course_fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
-        $record->course_summary = $description;
-        $record->course_tags = $tags;
-        $record->course_visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
-        $record->course_thumbnail = $asset->imageUrl;
-        $record->course_categoryidnumber = $categoryinfo->categoryidnumber;
-        $record->course_categoryname = $categoryinfo->categoryname;
-        $record->external_name = substr($asset->localizedMetadata[0]->title, 0, 255);
-        $record->external_intro = $description;
-        $record->external_content = $externalcontent;
-        $record->external_markcompleteexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
-
-        return $record;
-    }
-
-
-    /**
-     * Convert the Percipio Asset to a External Content Activity and import.
-     *
-     * @param object $asset The asset we receeved from Percipio
-     * @param string $parentcategory The parentcategory name or id
-     * @param bool $coursethumbnail If true, then the thumbnail for the course will downloaded and added.
-     * @return object Processing information for the asset
-     */
-    public static function import_percio_asset($asset, $parentcategory = null, $coursethumbnail = true) {
-        global $DB;
-
-        $record = self::percio_asset_to_externalcontentimport($asset, $parentcategory);
-
-        $result = new \stdClass();
-        $result->success = true;
-        $result->warn = false;
-        $result->courseshortname = $record->course_shortname;
-        $result->error = null;
-        $result->coursestatus = null;
-        $result->externalcontentstatus = null;
-        $result->thumbnailstatus = null;
-        $result->courseid = null;
-        $result->activityid = null;
-
-        $coursenotupdatedmsg = get_string('statuscoursenotupdated', 'tool_percipioexternalcontentsync');
-        $extcreatedmsg = get_string('statusextcreated', 'tool_percipioexternalcontentsync');
-        $extupdatedmsg = get_string('statusextupdated', 'tool_percipioexternalcontentsync');
-        $extnotupdatedmsg = get_string('statusextnotupdated', 'tool_percipioexternalcontentsync');
-        $invalidrecordmsg = get_string('invalidimportrecord', 'tool_percipioexternalcontentsync');
-        $thumbnailskipped = get_string('thumbnailskipped', 'tool_percipioexternalcontentsync');
-
-        $generator = \phpunit_util::get_data_generator();
-
-        if (self::validate_import_record($record)) {
-            // Set default message to course not updated.
-            $result->coursestatus = $coursenotupdatedmsg;
-            $course = self::create_course_from_imported($record);
-            $activity = self::create_externalcontent_from_imported($record);
-
-            if ($existing = self::get_course_by_idnumber($course->idnumber)) {
-                $result->courseid = $existing->id;
-                $updatecourse = true;
-                if (!$mergedcourse = self::update_course_with_imported($existing, $course)) {
-                    $updatecourse = false;
-                    $mergedcourse = $existing;
-                }
-
-                if ($record->course_thumbnail != '') {
-                    if ($coursethumbnail) {
-                        $response = self::add_course_thumbnail(
-                            $mergedcourse->id,
-                            $record->course_thumbnail
-                        );
-                        if (!$response->success) {
-                            $result->warn = true;
-                        }
-                        $result->thumbnailstatus = $response->status;
-                    } else {
-                        $result->thumbnailstatus = $thumbnailskipped;
-                    }
-                }
-
-                // Now check the externalcontent.
-                $addactivity = $updateactivity = false;
-                $existingactivity = self::get_externalcontent_by_idnumber(
-                    $mergedcourse->idnumber,
-                    $mergedcourse->id
-                );
-
-                if ($existingactivity) {
-                    $result->activityid = $existingactivity->id;
-                    $addactivity = false;
-                    $updateactivity = true;
-
-                    $mergedactivity = self::update_externalcontent_with_imported(
-                        $existingactivity,
-                        $activity
-                    );
-                    if ($mergedactivity === false) {
-                        $updateactivity = false;
-                        $addactivity = false;
-                        $mergedactivity = $activity;
-                        $result->externalcontentstatus = $extnotupdatedmsg;
-                    }
-                } else {
-                    $activity->course = $existing->id;
-                    $addactivity = true;
-                    $updateactivity = false;
-                    $mergedactivity = $activity;
-                }
-
-                if ($updatecourse === false && $addactivity === false && $updateactivity === false) {
-                    // Course data not changed.
-                    $result->coursestatus = $coursenotupdatedmsg;
-                } else {
-                    // Course or external content differs so we need to update.
-                    if ($updatecourse) {
-                        update_course($mergedcourse);
-                        $result->coursestatus = get_string(
-                            'statuscourseupdated',
-                            'tool_percipioexternalcontentsync',
-                            $mergedcourse->visible
-                        );
-                    }
-
-                    if ($addactivity) {
-                        $activityresponse = $generator->create_module('externalcontent',  $mergedactivity);
-                        $mergedactivity->id = $activityresponse->id;
-
-                        $cm = get_coursemodule_from_instance('externalcontent',  $mergedactivity->id);
-                        $cm->idnumber = $mergedcourse->idnumber;
-                        $DB->update_record('course_modules', $cm);
-                        self::update_course_completion_criteria($mergedcourse, $cm);
-
-                        $result->activityid = $mergedactivity->id;
-                        $result->externalcontentstatus = $extcreatedmsg;
-                    }
-
-                    if ($updateactivity) {
-                        $DB->update_record('externalcontent',  $mergedactivity);
-                        $cm = get_coursemodule_from_instance('externalcontent',  $mergedactivity->id);
-                        $cm->idnumber = $course->idnumber;
-                        $DB->update_record('course_modules', $cm);
-                        self::update_course_completion_criteria($mergedcourse, $cm);
-
-                        $result->activityid = $mergedactivity->id;
-                        $result->externalcontentstatus = $extupdatedmsg;
-                    }
-                }
-            } else {
-                $newcourse = create_course($course);
-                $result->courseid = $newcourse->id;
-                $activity->course = $newcourse->id;
-                $result->coursestatus = get_string(
-                    'statuscoursecreated',
-                    'tool_percipioexternalcontentsync',
-                    $newcourse->visible
-                );
-
-                if ($record->course_thumbnail != '') {
-                    if ($coursethumbnail) {
-                        $response = self::add_course_thumbnail(
-                            $newcourse->id,
-                            $record->course_thumbnail
-                        );
-                        if ($response->thumbnailfile) {
-                            $newcourse->overviewfiles_filemanager = $response->thumbnailfile->get_itemid();
-                        }
-                        if (!$response->success) {
-                            $result->warn = true;
-                        }
-                        $result->thumbnailstatus = $response->status;
-                        update_course($newcourse);
-                    } else {
-                        $result->thumbnailstatus = $thumbnailskipped;
-                    }
-                }
-
-                // Now we need to add a External content.
-                $activityrecord = $generator->create_module('externalcontent', $activity);
-
-                $cm = get_coursemodule_from_instance('externalcontent', $activityrecord->id);
-                $cm->idnumber = $course->idnumber;
-                $DB->update_record('course_modules', $cm);
-
-                $result->activityid = $activityrecord->id;
-                $result->externalcontentstatus = $extcreatedmsg;
-                self::update_course_completion_criteria($newcourse, $cm);
-            }
-        } else {
-            $result->success = false;
-            $result->error = $invalidrecordmsg;
-            $result->coursestatus = null;
-            $result->externalcontentstatus = null;
-            $result->thumbnailstatus = null;
-            $result->courseid = null;
-            $result->activityid = null;
-        }
-        return $result;
-    }
-
-
-
-    /**
-     * Validate we have the minimum info to create/update course
-     *
-     * @param object $record The record we imported
-     * @return bool true if validated
-     */
-    public static function validate_import_record($record) {
-        // As a minimum we need.
-        // course idnumber.
-        // course shortname.
-        // course longname.
-        // external name.
-        // external intro.
-        // external content.
-
-        $isvalid = true;
-        $isvalid = $isvalid && !empty($record->course_idnumber);
-        $isvalid = $isvalid && !empty($record->course_shortname);
-        $isvalid = $isvalid && !empty($record->course_fullname);
-        $isvalid = $isvalid && !empty($record->external_name);
-        $isvalid = $isvalid && !empty($record->external_intro);
-        $isvalid = $isvalid && !empty($record->external_content);
-
-        return $isvalid;
+        // Format for Moodle.
+        $tagsarry = array_map('self::format_asset_tags', $tagsarry);
+        // Normalize the tags.
+        return \core_tag_tag::normalize($tagsarry, false);
     }
 
     /**
@@ -514,24 +270,29 @@ class helper {
         return null;
     }
 
-    /**
-     * Return the category id, creating the category if necessary from the import record.
-     *
-     * @param object $record Validated Imported Record
-     * @return int The category id
-     */
-    public static function get_or_create_category_from_import_record($record) {
-        global $CFG;
-        $categoryid = $record->category;
 
-        if (!empty($record->course_categoryidnumber)) {
-            if (!$categoryid = self::resolve_category_by_idnumber($record->course_categoryidnumber)) {
-                if (!empty($record->course_categoryname)) {
+    /**
+     * Return the category id, creating the category if necessary.
+     *
+     * @param int $parentid Parent id
+     * @param string $categoryname The category name
+     * @param string $categoryidnumber The category idnumber
+     * @return int The category id, or $parentid if empty
+     */
+    public static function get_or_create_category(int $parentid,
+                                                  ?string $categoryname = null,
+                                                  ?string $categoryidnumber = null): int {
+        global $CFG;
+        $categoryid = $parentid;
+
+        if (!empty($categoryidnumber)) {
+            if (!$categoryid = self::resolve_category_by_idnumber($categoryidnumber)) {
+                if (!empty($categoryname)) {
                     // Category not found and we have a name so we need to create.
                     $category = new \stdClass();
-                    $category->parent = $record->category;
-                    $category->name = $record->course_categoryname;
-                    $category->idnumber = $record->course_categoryidnumber;
+                    $category->parent = $parentid;
+                    $category->name = $categoryname;
+                    $category->idnumber = $categoryidnumber;
 
                     if (method_exists('\core_course_category', 'create')) {
                         $createdcategory = \core_course_category::create($category);
@@ -546,329 +307,115 @@ class helper {
         return $categoryid;
     }
 
-    /**
-     * Retrieve a course by its idnumber.
-     *
-     * @param string $courseidnumber course idnumber
-     * @return object course or null
-     */
-    public static function get_course_by_idnumber($courseidnumber) {
-        global $DB;
-
-        $params = array('idnumber' => $courseidnumber);
-        if ($course = $DB->get_record('course', $params)) {
-            $tags = \core_tag_tag::get_item_tags_array(
-                'core',
-                'course',
-                $course->id,
-                \core_tag_tag::BOTH_STANDARD_AND_NOT,
-                0,
-                false
-            );
-            $course->tags = array();
-            foreach ($tags as $value) {
-                array_push($course->tags, $value);
-            }
-        }
-        return $course;
-    }
 
     /**
-     * Create a course from the import record.
+     * sanitizeUrl
      *
-     * @param object $record Validated Imported Record
-     * @param string $tagdelimiter The value to use to split the delimited $record->course_tags string
-     * @return object course or null
-     */
-    public static function create_course_from_imported($record, $tagdelimiter = "|") {
-        $course = new \stdClass();
-        $course->idnumber = $record->course_idnumber;
-        $course->shortname = $record->course_shortname;
-        $course->fullname = $record->course_fullname;
-        $course->summary = $record->course_summary;
-        $course->summaryformat = 1; // FORMAT_HTML.
-        $course->visible = $record->course_visible;
-
-        $course->tags = array();
-        // Split the tag string into an array.
-        if (!empty($record->course_tags)) {
-            $course->tags = explode($tagdelimiter, $record->course_tags);
-        }
-
-        // Fixed default values.
-        $course->format = "singleactivity";
-        $course->numsections = 0;
-        $course->newsitems = 0;
-        $course->showgrades = 0;
-        $course->showreports = 0;
-        $course->startdate = time();
-        $course->activitytype = "externalcontent";
-
-        $course->category = self::get_or_create_category_from_import_record($record);
-
-        // Add completion flags.
-        $course->enablecompletion = 1;
-
-        return $course;
-    }
-
-    /**
-     * Merge changes from $imported course into $existing course
-     *
-     * @param object $existing Course Record for existing course
-     * @param object $imported  Course Record for imported course
-     * @return object course or FALSE if no changes
-     */
-    public static function update_course_with_imported($existing, $imported) {
-        // Sort the tags arrays.
-        sort($existing->tags);
-        sort($imported->tags);
-
-        $result = clone $existing;
-        $result->fullname = $imported->fullname;
-        $result->shortname = $imported->shortname;
-        $result->idnumber = $imported->idnumber;
-        $result->visible = $imported->visible;
-        $result->tags = $imported->tags;
-        $result->category = $imported->category;
-
-        // We need to apply Moodle FORMAT_HTML conversion as this is how summary would have been stored.
-        if ($existing->summary !== format_text($imported->summary, FORMAT_HTML, array('filter' => false))) {
-            $result->summary = $imported->summary;
-        }
-
-        if ($result != $existing) {
-            return $result;
-        }
-        return false;
-    }
-
-    /**
-     * Retrieve a externalcontent by its name.
-     *
-     * @param string $name externalcontent name
-     * @param string $courseid course identifier
-     * @return object externalcontent.
-     */
-    public static function get_externalcontent_by_name($name, $courseid) {
-        global $DB;
-
-        $params = array('name' => $name, 'course' => $courseid);
-        return $DB->get_record('externalcontent', $params);
-    }
-
-    /**
-     * Retrieve a externalcontent by its idnumber.
-     *
-     * @param string $idnumber externalcontent name
-     * @param string $courseid course identifier
-     * @return object externalcontent.
-     */
-    public static function get_externalcontent_by_idnumber($idnumber, $courseid) {
-        global $DB;
-
-        $params = array('idnumber' => $idnumber, 'course' => $courseid);
-        $cm = $DB->get_record('course_modules', $params);
-
-        if (!$cm) {
-            return null;
-        }
-
-        $params = array('id' => $cm->instance, 'course' => $courseid);
-        return $DB->get_record('externalcontent', $params);
-    }
-
-    /**
-     * Create a externalcontent from the import record.
-     *
-     * @param object $record Validated Imported Record
-     * @return object course or null
-     */
-    public static function create_externalcontent_from_imported($record) {
-        // All data provided by the data generator.
-        $externalcontent = new \stdClass();
-        $externalcontent->name = $record->external_name;
-        $externalcontent->intro = $record->external_intro;
-        $externalcontent->introformat = 1; // FORMAT_HTML.
-        $externalcontent->content = $record->external_content;
-        $externalcontent->contentformat = 1; // FORMAT_HTML.
-
-        $externalcontent->completion = 2;
-        $externalcontent->completionview = 1;
-        $externalcontent->completionexternally = $record->external_markcompleteexternally;
-
-        // Set display option defaults.
-        $displayoptions = array();
-        if (property_exists($record, 'external_printheading')) {
-            $displayoptions['printheading'] = $record->external_printheading;
-        }
-        if (property_exists($record, 'external_printintro')) {
-            $displayoptions['printintro']   = $record->external_printintro;
-        }
-        if (property_exists($record, 'external_printlastmodified')) {
-            $displayoptions['printlastmodified'] = $record->external_printintro;
-        }
-        $externalcontent->displayoptions = serialize($displayoptions);
-
-        return $externalcontent;
-    }
-
-    /**
-     * Merge changes from $imported into $existing
-     *
-     * @param object $existing Page Record for existing page
-     * @param object $imported  page Record for imported page
-     * @return object page or FALSE if no changes
-     */
-    public static function update_externalcontent_with_imported($existing, $imported) {
-        $result = clone $existing;
-
-        $result->name = $imported->name;
-        $result->intro = $imported->intro;
-        $result->content = $imported->content;
-        $result->completionexternally = clean_param($imported->completionexternally, PARAM_BOOL);
-
-        // Set display option defaults.
-        $result->displayoptions = $imported->displayoptions;
-
-        if ($result != $existing) {
-            return $result;
-        }
-        return false;
-    }
-
-    /**
-     * Update the course completion criteria to use the Activity Completion
-     *
-     * @param object $course Course Object
-     * @param object $cm Course Module Object for the Single Page
+     * @param  mixed $url
      * @return void
      */
-    public static function update_course_completion_criteria($course, $cm) {
-        $criterion = new \completion_criteria_activity();
+    private static function sanitizeurl($url) {
+        $parts = parse_url($url);
 
-        $params = array('id' => $course->id, 'criteria_activity' => array($cm->id => 1));
-        if ($criterion->fetch($params)) {
-            return;
+        // Optional but we only sanitize URLs with scheme and host defined.
+        if ($parts === false || empty($parts["scheme"]) || empty($parts["host"])) {
+            return $url;
         }
 
-        // Criteria for course.
-        $criteriadata = new \stdClass();
-        $criteriadata->id = $course->id;
-        $criteriadata->criteria_activity = array($cm->id => 1);
-        $criterion->update_config($criteriadata);
+        $sanitizedpath = null;
+        if (!empty($parts["path"])) {
+            $pathparts = explode("/", $parts["path"]);
+            foreach ($pathparts as $pathpart) {
+                if (empty($pathpart)) {
+                    continue;
+                }
+                // The Path part might already be urlencoded.
+                $sanitizedpath .= "/" . rawurlencode(rawurldecode($pathpart));
+            }
+        }
 
-        // Handle overall aggregation.
-        $aggdata = array(
-            'course'        => $course->id,
-            'criteriatype'  => null,
-            'method' => COMPLETION_AGGREGATION_ALL
-        );
+        // Build the url.
+        $targeturl = $parts["scheme"] . "://" .
+            ((!empty($parts["user"]) && !empty($parts["pass"])) ? $parts["user"] . ":" . $parts["pass"] . "@" : "") .
+            $parts["host"] .
+            (!empty($parts["port"]) ? ":" . $parts["port"] : "") .
+            (!empty($sanitizedpath) ? $sanitizedpath : "") .
+            (!empty($parts["query"]) ? "?" . $parts["query"] : "") .
+            (!empty($parts["fragment"]) ? "#" . $parts["fragment"] : "");
 
-        $aggregation = new \completion_aggregation($aggdata);
-        $aggregation->save();
+        return $targeturl;
+    }
 
-        $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_ACTIVITY;
-        $aggregation = new \completion_aggregation($aggdata);
-        $aggregation->save();
+    /**
+     * Convert the Percipio Asset to an External Content importrecord.
+     *
+     * @param object $asset The asset we recieved from Percipio
+     * @param string|int $parentcategory The parentcategory name or id
+     * @param bool $thumbnail If true, then the thumbnail for the course will be processed.
+     * @return mod_externalcontent\importrecord|bool The asset converted to an importrecord, or false if not valid
+     */
+    public static function percio_asset_to_importrecord($asset, $parentcategory = null, $thumbnail = true) : importrecord {
 
-        $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_COURSE;
-        $aggregation = new \completion_aggregation($aggdata);
-        $aggregation->save();
+        // Create/Retrieve categoryid.
+        $parentcategoryid = self::resolve_category_by_id_or_idnumber($parentcategory);
+        $categoryinfo = self::get_percio_asset_category($asset);
+        $categoryid = self::get_or_create_category($parentcategoryid,
+                                                   $categoryinfo->categoryname,
+                                                   $categoryinfo->categoryidnumber);
+        // Create courseimport class.
+        $courseimport = new \stdClass();
+        $courseimport->idnumber = $asset->xapiActivityId;;
+        $courseimport->shortname = substr($asset->localizedMetadata[0]->title, 0, 215) . ' (' . $asset->id . ')';
+        $courseimport->fullname = substr($asset->localizedMetadata[0]->title, 0, 255);
+        $courseimport->summary = self::get_percipio_description($asset);
+        $courseimport->tags = self::get_percio_asset_tags($asset);
+        $courseimport->visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
+        $courseimport->thumbnail = $thumbnail ? self::sanitizeurl($asset->imageUrl) : null;
+        $courseimport->category = $categoryid;
 
-        $aggdata['criteriatype'] = COMPLETION_CRITERIA_TYPE_ROLE;
-        $aggregation = new \completion_aggregation($aggdata);
-        $aggregation->save();
+        // Create moduleimport class.
+        $moduleimport = new \stdClass();
+        $moduleimport->name = substr($asset->localizedMetadata[0]->title, 0, 255);
+        $moduleimport->intro = self::get_percipio_description($asset);
+        $moduleimport->content = self::get_percipio_description($asset, true, true);
+        $moduleimport->completionexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
+
+        // Get our importrecord.
+        $importrecord = new importrecord($courseimport, $moduleimport);
+        return $importrecord->validate() ? $importrecord : false;
     }
 
 
     /**
-     * Add_course_thumbnail
+     * Import the Percipio Asset, creating or updating as needed.
      *
-     * @param  object $courseid
-     * @param  string $url
-     * @return object Object containing a status string and a stored_file object or null
+     * @param object $asset The asset we receeved from Percipio
+     * @param string $parentcategory The parentcategory name or id
+     * @param bool $thumbnail If true, then the thumbnail for the course will be processed.
+     * @return object Processing information for the asset
      */
-    public static function add_course_thumbnail($courseid, $url) {
-        global $CFG;
+    public static function import_percio_asset($asset, $parentcategory = null, $thumbnail = true) {
+        global $DB;
 
-        $response = new \stdClass();
-        $response->success = true;
-        $response->status = null;
-        $response->thumbnailfile = null;
+        $result = new \stdClass();
+        $result->success = false;
+        $result->message = null;
+        $result->courseid = null;
+        $result->moduleid = null;
 
-        require_once($CFG->libdir . '/filelib.php');
-        $fs = get_file_storage();
+        if ($importrecord = self::percio_asset_to_importrecord($asset, $parentcategory, $thumbnail)) {
+            $instance = importableinstance::get_from_importrecord($importrecord);
+            $result->success = true;
+            $result->courseid = $instance->get_course_id();
+            $result->moduleid = $instance->get_module_id();
+            $result->message = implode(", ", $instance->get_messages());
+            $result->importrecord = $importrecord;
+        } else {
+            $result->success = false;
+            $result->message = get_string('invalidimportrecord', 'tool_percipioexternalcontentsync');
 
-        $overviewfilesoptions = course_overviewfiles_options($courseid);
-        $filetypesutil = new \core_form\filetypes_util();
-        $whitelist = $filetypesutil->normalize_file_types($overviewfilesoptions['accepted_types']);
+        };
 
-        $parsedurl = new \moodle_url($url);
-
-        $ext = pathinfo($parsedurl->get_path(), PATHINFO_EXTENSION);
-        $filename = 'thumbnail.' . $ext;
-
-        // Check the extension is valid.
-        if (!$filetypesutil->is_allowed_file_type($filename, $whitelist)) {
-            $response->success = false;
-            $response->status = get_string('thumbnailinvalidext', 'tool_percipioexternalcontentsync', $ext);
-            return $response;
-        }
-
-        $coursecontext = \context_course::instance($courseid);
-
-        // Get the file if it already exists.
-        $response->thumbnailfile = $fs->get_file($coursecontext->id, 'course', 'overviewfiles', 0, '/', $filename);
-
-        if ($response->thumbnailfile) {
-            // Check the file is from same source as url.
-            $source = $response->thumbnailfile->get_source();
-            if ($source == $url) {
-                // It is the same so return this file.
-                $response->status = get_string('thumbnailsamesource', 'tool_percipioexternalcontentsync');
-                return $response;
-            } else {
-                // Delete files and continue with download.
-                $fs->delete_area_files($coursecontext->id, 'course', 'overviewfiles');
-                $response->thumbnailfile = null;
-            }
-        }
-
-        $thumbnailfilerecord = array(
-            'contextid' => $coursecontext->id,
-            'component' => 'course',
-            'filearea' => 'overviewfiles',
-            'itemid' => '0',
-            'filepath' => '/',
-            'filename' => $filename,
-        );
-
-        $urlparams = array(
-            'calctimeout' => false,
-            'timeout' => 5,
-            'skipcertverify' => true,
-            'connecttimeout' => 5,
-        );
-
-        try {
-            $response->thumbnailfile = $fs->create_file_from_url($thumbnailfilerecord, $url, $urlparams);
-            // Check if Moodle recognises as a valid image file.
-            if (!$response->thumbnailfile->is_valid_image()) {
-                $fs->delete_area_files($coursecontext->id, 'course', 'overviewfiles');
-                $response->success = false;
-                $response->thumbnailfile = null;
-                $response->status = get_string('thumbnailinvalidtype', 'tool_percipioexternalcontentsync');
-            } else {
-                $response->status = get_string('thumbnaildownloaded', 'tool_percipioexternalcontentsync');
-            }
-            return $response;
-        } catch (\file_exception $e) {
-            $fs->delete_area_files($coursecontext->id, 'course', 'overviewfiles');
-            $response->success = false;
-            $response->thumbnailfile = null;
-            $response->status = get_string('thumbnaildownloaderror', 'tool_percipioexternalcontentsync', $e->getMessage());
-            return $response;
-        }
+        return $result;
     }
 }

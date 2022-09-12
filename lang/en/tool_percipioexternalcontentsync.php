@@ -67,27 +67,31 @@ $string['errorapicall'] = 'Catalog API Call failed:"{$a}"';
 $string['errorservererror'] = 'Catalog API Call failed.  Server sent : "{$a}"';
 $string['errorwebservice'] = 'API Client Exception:"{$a}"';
 
-// Cache.
-$string['cachedef_helper'] = 'Upload page helper caching';
-
 // Helper.
-$string['thumbnailinvalidext'] = 'Invalid type. {$a}.';
-$string['thumbnailinvalidtype'] = 'Invalid type.';
-$string['thumbnailsamesource'] = 'Not updated.';
-$string['thumbnaildownloaded'] = 'Created.';
-$string['thumbnaildownloaderror'] = 'Error. {$a}.';
-
-$string['thumbnailupdated'] = 'Updated.';
-$string['thumbnailcreated'] = 'Created.';
-$string['thumbnailnotupdated'] = 'Not updated.';
-$string['thumbnailskipped'] = 'Skipped.';
-
-// Importer.
-$string['invalidparentcategoryid'] = 'Parent category is invalid.';
 $string['invalidimportrecord'] = 'Invalid Import Record.';
-$string['statuscoursecreated'] = 'Created. Visible: {$a}.';
-$string['statuscourseupdated'] = 'Updated. Visible: {$a}.';
-$string['statuscoursenotupdated'] = 'Not Updated.';
-$string['statusextcreated'] = 'Created.';
-$string['statusextupdated'] = 'Updated.';
-$string['statusextnotupdated'] = 'Not Updated.';
+
+// Task - percipiosync.
+$string['startingtask'] = 'Start retrieving Percipio Assets';
+$string['memoryusage'] = 'Memory Usage: {$a}';
+$string['requestparams'] = 'Request parameters. pagingRequestId : {$a->pagingRequestId} updatedSince: {$a->updatedSince} offset: {$a->offset} max: {$a->max}';
+$string['responsedata'] = 'Downloaded {$a->downloaded} of {$a->totalcount}';
+$string['startprocessing'] = 'Start Processing Response';
+$string['successprocessing'] = 'SUCCESS. Course ID: {$a->courseid} Module ID: {$a->moduleid} Messages: {$a->message}';
+$string['failprocessing'] = 'FAILED. Messages: {$a->message}';
+$string['endprocessing'] = 'End Processing Response';
+$string['taskresults'] = 'Finished retrieving Percipio Assets. Processed: {$a->downloaded} Success: {$a->success} Failed: {$a->failed}';
+$string['updateconfigdate'] = 'Config tool_percipioexternalcontentsync\updatedsince updated: {$a}';
+
+// Mustache.
+$string['template_type'] = 'Type';
+$string['template_locale'] = 'Locale';
+$string['template_duration'] = 'Duration (hh:mm:ss)';
+$string['template_by'] = 'Author';
+$string['template_publisher'] = 'Publisher';
+$string['template_isbn'] = 'ISBN';
+$string['template_updateddate'] = 'Last Updated';
+$string['template_retirementdate'] = 'Planned Retirement';
+$string['template_retireddate'] = 'Retired';
+$string['template_description'] = 'Description';
+$string['template_objectives'] = 'Learning Objectives';
+$string['template_launch'] = 'Launch';
