@@ -24,8 +24,9 @@ To use this plugin you will need:
 
 1. Your Moodle site must accessible over the Internet, using HTTPS and a SSL Certificate from a recognised Public Certificate Authority to be able to get results for the Percipio content via the basic LRS functionality provdied by [External content activity module](https://github.com/lushonline/moodle-mod_externalcontent#setup-activity-provider).
 2. A Skillsoft [Percipio](https://www.skillsoft.com/platform-solution/percipio/) Site
-3. A [Percipio Service Account](https://documentation.skillsoft.com/en_us/pes/Integration/Understanding-Percipio/rest-api/pes_authentication.htm) with permission for accessing the [CONTENT DISCOVERY API](https://documentation.skillsoft.com/en_us/pes/Integration/Understanding-Percipio/rest-api/pes_rest_api.htm)
+3. A [Percipio Service Account](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_rest_authentication.htm#Authorization) with permission for accessing the [CONTENT DISCOVERY API](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm)
 4. A [LRS Connection Configured by Skillsoft](https://documentation.skillsoft.com/en_us/pes/Integration/int_xapi.htm) to connect to the basic LRS functionality provdied by [External content activity module](https://github.com/lushonline/moodle-mod_externalcontent#setup-activity-provider). You will need to share the information from Moodle with Skillsoft.
+5. Percipio and Moodle user accounts should use the same user identifier, so for example if your Moodle loginname is `student1` the Percipio account should use a username of `student1`.
 
 **IMPORTANT** : Skillsoft may require you to pay fees to enable the LRS connection and utilise the APIs. Please contact Skillsoft for information.
 
@@ -43,7 +44,7 @@ To use this plugin you will need:
 
    https://moodle.org/plugins/mod_externalcontent
 
-2. Install the plugin the same as any standard moodle plugin either via the
+1. Install the plugin the same as any standard moodle plugin either via the
    Moodle plugin directory, or you can use git to clone it into your source:
 
    ```sh
@@ -54,20 +55,32 @@ To use this plugin you will need:
 
    https://moodle.org/plugins/tool_percipioexternalcontentsync
 
-3. Configure the plugin.
+1. Configure the plugin.
 
-## Configuration
+## Percipio Configuration/Setup
+
+**IMPORTANT** : Skillsoft may require you to pay fees to enable the LRS connection and utilise the APIs. Please contact Skillsoft for information.
+
+1. Ask Skillsoft to configure the content selection for your Percipio site to support the retrieval of data about content using the [CONTENT DISCOVERY API](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm)
+
+1. Ask Skillsoft to configure an LRS connection in Percipio.
+
+   1. You will need to supply the LRS endpoint and the username/password configured in the [https://moodle.org/plugins/mod_externalcontent](https://moodle.org/plugins/mod_externalcontent). You can find these on the settings page.
+
+1. Ask Skillsoft to create a Service Account in Percipio, this account should have permission to access the [CONTENT DISCOVERY API](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm)
+
+## Moodle Configuration
 
 The following configuration settings need to be set in Moodle.
 
-| Name                        | Setting         | Description                                                                                                                                                                                                                                                                                                                                                              |
+| Name                        | Setting         | Description    |
 | --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Percipio Base URL           | baseurl         | This is the base URL for accessing the Percipio API. See [Skillsoft Documentation](https://documentation.skillsoft.com/en_us/pes/Integration/int_api_overview.htm), this should be either https://api.percipio.com or https://dew1-api.percipio.com. The Skillsoft Team will provide this information.                                                                   |
-| Percipio OrgId              | orgid           | This is a UUID that is unique to the Percipio Site. The Skillsoft Team will provide this information.                                                                                                                                                                                                                                                                    |
-| Percipio Bearer             | bearer          | The Percipio API uses a Bearer token for authentication. This should be the unique bearer token created for you to use. The Skillsoft Team will provide this information.                                                                                                                                                                                                |
-| Return assets updated since | updatedsice     | This ISO8601 date time (yyyy-mm-ddTHH:MM:SSZ) is passed to the API to determine the assets to return based on when they were updated on Percipio. For example to get all the assets since December 20th 2021 at 10:00:00 UTC you would enter 2022-12-20T10:00:00Z. If left blank all items are returned. After successful sync the value is set to the time of the sync. |
+| Percipio OrgId              | orgid           | This is a UUID that is unique to the Percipio Site. The Skillsoft Team will provide this information after they have created the Service Account for you.  |
+| Percipio Bearer             | bearer          | The Percipio API uses a Bearer token for authentication. This should be the unique bearer token created for you to use. The Skillsoft Team will provide this information after they have created the Service Account for you.  |
+| Return assets updated since | updatedsice     | This ISO8601 date time (yyyy-mm-ddTHH:MM:SSZ) is passed to the API to determine the assets to return based on when they were updated on Percipio. For example to get all the assets since December 20th 2021 at 10:00:00 UTC you would enter 2022-12-20T10:00:00Z. If left blank all items are returned. After successful sync the value is set to the time of the last sync. |
 | Max assets per request      | max             | The Percipio API returns a paged data set of assets. This controls the number returned for each page. The default and maximum is 1000.                                                                                                                                                                                                                                   |
-| Parent Category             | category        | When the assets are added to Moodle, sub-categories will be created automatically. This configures the parent category to create them under.                                                                                                                                                                                                                             |
+| Parent Category             | category        | When the assets are added to Moodle, sub-categories will be created automatically. This configures the parent category to create them under.  See details in [MAPPING](MAPPING.md) |
 | Course thumbnail            | coursethumbnail | The Percipio asset contains a URL to a thumbnail image. This setting controls whether this thumbnail is downloaded and added to the Moodle Course. If this is not selected the time taken to sync a lot of assets is reduced.                                                                                                                                            |
 | Mustache teamplate          | templatefile    | The Percipio asset is formatted using a Mustache template to produce the course and external content description in HTML, and the HTML for the _content_ property. There is a default template configured in `templates/content.mustache`, you can copy and edit this template and then upload it here to change the HTML produced.                                      |
 
@@ -88,7 +101,7 @@ When the task runs the process is:
       1. Category exists under the Parent Category configured, skip.
       1. Category does not exist under the Parent Category configured, create a new category under the parent.
 
-   1. Lookup up Course using Moodle Course `ID Number` matches xapiActivityID from Percipio
+   1. Lookup up the External Content using Moodle Course Module `ID Number` matches xapiActivityID from Percipio, and its containing Moodle Course.
       1. Course does not exist create it
       1. Course exists and the properties in Moodle are the same as from Percipio, skip.
       1. Course exists and the properties in Moodle are not the same as from Percipio, update the course overwriting values in Moodle.
@@ -113,7 +126,7 @@ For more information for how Percipio asset data is mapped to Course and Externa
 
 ## Mustache Template
 
-The `templates/content.mustache` is used to populate:
+The [templates/content.mustache](templates/content.mustache) is used to populate:
 
 - Course and External Content Descriptions - the template is passed `showthumbnail=false` and `showlaunch=false`
 - External Content Content - the template is passed `showthumbnail=true` and `showlaunch=true`, this ensures a hyperlinked image and launch button are included.
