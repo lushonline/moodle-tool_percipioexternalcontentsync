@@ -8,7 +8,7 @@ A Percipio site could contain **40,000 or more** assets, this tool allows all th
 
 The schedule task runs the sync process which will create/update or deactivate a Moodle Course, consisting of a Single External content activity for each asset synched from Percipio, more details can be found in [How it works](#how-it-works).
 
-The External content Activity and Course are setup to support Moodle Completion based on completion information returned from Percipio using xAPI if EXTERNAL_MARKCOMPLETEEXTERNALLY column if Percipio supports sending a completed xAPI statement to the [External content activity module](https://github.com/lushonline/moodle-mod_externalcontent#setup-activity-provider) LRS.
+The External content Activity and Course are setup to support Moodle Completion based on completion information returned from Percipio using xAPI.Percipio supports sending a completed xAPI statement for all Percipio Content Types except "Channels" as these are currently not completable to the [External content activity module](https://github.com/lushonline/moodle-mod_externalcontent#setup-activity-provider) LRS.
 
 ## Table of Contents
 
