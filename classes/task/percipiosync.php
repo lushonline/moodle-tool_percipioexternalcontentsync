@@ -83,11 +83,21 @@ class percipiosync extends \core\task\scheduled_task {
      * @return array
      */
     public function get_all_metadata($parentcategory, $updatedsince=null, $max=null, $pagingrequestid=null, $thumbnail=true) {
-        $this->trace->output('Start retrieving Percipio Assets');
+        $this->trace->output(get_string('startingtask', 'tool_percipioexternalcontentsync'));
         if (function_exists('memory_get_usage')) {
-            $this->trace->output('Memory Usage:'.display_size(memory_get_usage()));
+            $this->trace->output(get_string('memoryusage',
+                                            'tool_percipioexternalcontentsync',
+                                            display_size(memory_get_usage())
+                                            )
+                                );
         }
         $this->trace->output('');
+
+        $processed = array();
+        $processed['downloaded'] = 0;
+        $processed['totalcount'] = 0;
+        $processed['success'] = 0;
+        $processed['failed'] = 0;
 
         $data = array();
         $data['offset'] = 0;
@@ -97,40 +107,33 @@ class percipiosync extends \core\task\scheduled_task {
 
         if (!empty($updatedsince)) {
             $data['updatedSince'] = $updatedsince;
-            $this->trace->output('Requesting Changes since: '.$updatedsince);
         }
 
         if (!empty($max)) {
             $data['max'] = $max;
-            $this->trace->output('Maximum records per request: '.$max);
         }
 
         if (!empty($pagingrequestid)) {
             $data['pagingRequestId'] = $pagingrequestid;
-            $this->trace->output('pagingRequestId for request: '.$pagingrequestid);
         }
 
         $assetlist = null;
-        $requestcounter = 0;
-        $totalcount = 0;
-        $downloaded = 0;
-        $success = 0;
-        $warn = 0;
-        $failed = 0;
-
         do {
-            $requestcounter += 1;
             $callresult = null;
             $moredata = false;
             $pagingrequestid = $data['pagingRequestId'] ?? null;
-            $this->trace->output('Request: '.$requestcounter.' pagingRequestId: '.$pagingrequestid);
+            $this->trace->output(get_string('requestparams',
+                                            'tool_percipioexternalcontentsync',
+                                            $data
+                                            )
+                                );
             $callresult = $this->service->get_catalog_content($data);
             if ($callresult) {
                 $assetlist = $callresult->data;
-                $downloaded += count($assetlist);
-                $totalcount = intval($callresult->headers['x-total-count']);
+                $processed['downloaded'] += count($assetlist);
+                $processed['totalcount'] = intval($callresult->headers['x-total-count']);
 
-                if ($downloaded < $totalcount) {  // We need to download more data.
+                if ($processed['downloaded'] < $processed['totalcount']) {  // We need to download more data.
                     if (empty($data['pagingRequestId'])) {
                         $data['pagingRequestId'] = $callresult->headers['x-paging-request-id'];
                     }
@@ -140,37 +143,44 @@ class percipiosync extends \core\task\scheduled_task {
                     $moredata = false;
                 }
                 unset($callresult);
-                $this->trace->output('Response: '.$requestcounter.' Downloaded: '.$downloaded.' of '.$totalcount);
-                $this->trace->output('Start Processing: '.$requestcounter);
+                $this->trace->output(get_string('responsedata',
+                                            'tool_percipioexternalcontentsync',
+                                            $processed
+                                            )
+                                    );
+                $this->trace->output(get_string('startprocessing', 'tool_percipioexternalcontentsync'));
                 foreach ($assetlist as $asset) {
                     $importresult = helper::import_percio_asset($asset,
                                                                 $parentcategory,
                                                                 $thumbnail);
                     if ($importresult->success) {
-                        $this->trace->output('SUCCESS.'.
-                                             ' Course ID: '.$importresult->courseid.
-                                             ' Module ID: '.$importresult->moduleid.
-                                             ' Messages: '.$importresult->message);
-                        $success += 1;
+                        $this->trace->output(get_string('successprocessing',
+                                                        'tool_percipioexternalcontentsync', $importresult));
+                        $processed['success'] += 1;
                     }
 
                     if (!$importresult->success) {
-                        $this->trace->output('FAILED. '.$importresult->message);
-                        $failed += 1;
+                        $this->trace->output(get_string('failprocessing',
+                                                        'tool_percipioexternalcontentsync', $importresult));
+                        $processed['failed'] += 1;
                     }
 
                 }
+                unset($importresult);
                 unset($assetlist);
-                $this->trace->output('Finished Processing: '.$requestcounter);
+                $this->trace->output(get_string('endprocessing', 'tool_percipioexternalcontentsync'));
                 $this->trace->output('');
             }
         } while ($moredata);
 
-        $this->trace->output('Finished retrieving Percipio Assets. Processed: '.$downloaded.
-                             ' Success: '.$success.
-                             ' Failed: '.$failed);
+        $this->trace->output(get_string('taskresults',
+                                        'tool_percipioexternalcontentsync', $processed));
         if (function_exists('memory_get_usage')) {
-            $this->trace->output('Memory Usage:'.display_size(memory_get_usage()));
+            $this->trace->output(get_string('memoryusage',
+                                            'tool_percipioexternalcontentsync',
+                                            display_size(memory_get_usage())
+                                            )
+                                );
         }
         $this->trace->output('');
         return true;
@@ -192,16 +202,16 @@ class percipiosync extends \core\task\scheduled_task {
         $percipiometadata = null;
 
         if (empty($config->category)) {
-            $this->trace->output('Skipping task - '.get_string('errornocategory', 'tool_percipioexternalcontentsync'));
+            $this->trace->output(get_string('errornocategory', 'tool_percipioexternalcontentsync'));
             return false;
         } else if (empty($config->baseurl)) {
-            $this->trace->output('Skipping task - '.get_string('errornobaseurl', 'tool_percipioexternalcontentsync'));
+            $this->trace->output(get_string('errornobaseurl', 'tool_percipioexternalcontentsync'));
             return false;
         } else if (empty($config->orgid)) {
-            $this->trace->output('Skipping task - '.get_string('errornoorgid', 'tool_percipioexternalcontentsync'));
+            $this->trace->output(get_string('errornoorgid', 'tool_percipioexternalcontentsync'));
             return false;
         } else if (empty($config->bearer)) {
-            $this->trace->output('Skipping task - '.get_string('errornobearer', 'tool_percipioexternalcontentsync'));
+            $this->trace->output(get_string('errornobearer', 'tool_percipioexternalcontentsync'));
             return false;
         }
 
@@ -222,10 +232,11 @@ class percipiosync extends \core\task\scheduled_task {
                                                    null,
                                                    $config->coursethumbnail)) {
                 set_config('updatedsince', $starttimestamp, 'tool_percipioexternalcontentsync');
-                $this->trace->output('Config tool_percipioexternalcontentsync\updatedsince updated: '.$starttimestamp);
+                $this->trace->output(get_string('updateconfigdate',
+                                                'tool_percipioexternalcontentsync', $starttimestamp));
             };
         } catch (\Exception $e) {
-            $this->trace->output('Exception: '.$e->getMessage());
+            $this->trace->output($e->getMessage());
             return false;
         }
 

@@ -153,23 +153,23 @@
         </div>
         {{/showthumbnail}}
         <div class="col">
-            <div><strong>Type: </strong>{{percipio.contentType.displayLabel}}</div>
-            {{#percipioformatted.language}}<div><strong>Locale: </strong>{{percipioformatted.language}}{{#percipioformatted.region}} ({{percipioformatted.region}}){{/percipioformatted.region}}</div>{{/percipioformatted.language}}
-            {{#percipioformatted.duration}}<div><strong>Duration (hh:mm:ss): </strong>{{percipioformatted.duration}}</div>{{/percipioformatted.duration}}
-            {{#hasby}}<div><strong>Author: </strong>{{#percipio.by}}{{.}}, {{/percipio.by}}</div>{{/hasby}}
-            {{#percipio.publication}}<div><strong>Publisher: </strong>{{publisher}}{{#copyrightYear}} {{.}}{{/copyrightYear}}</div>{{/percipio.publication}}
-            {{#percipio.publication.isbn}}<div><strong>ISBN: </strong>{{.}}</div>{{/percipio.publication.isbn}}
-            {{#percipio.lifecycle}}<div><strong>Last Updated: </strong>{{lastUpdatedDate}}</div>{{/percipio.lifecycle}}
-            {{^percipio.lifecycle.retiredDate}}{{#percipio.lifecycle.plannedRetirementDate}}<div><strong>Planned Retirement: </strong>{{.}}</div>{{/percipio.lifecycle.plannedRetirementDate}}{{/percipio.lifecycle.retiredDate}}
-            {{#percipio.lifecycle.retiredDate}}<div><strong>Retired: </strong>{{.}}</div>{{/percipio.lifecycle.retiredDate}}
+            <div><strong>{{#str}} template_type, tool_percipioexternalcontentsync {{/str}}: </strong>{{percipio.contentType.displayLabel}}</div>
+            {{#percipioformatted.language}}<div><strong>{{#str}} template_locale, tool_percipioexternalcontentsync {{/str}}: </strong>{{percipioformatted.language}}{{#percipioformatted.region}} ({{percipioformatted.region}}){{/percipioformatted.region}}</div>{{/percipioformatted.language}}
+            {{#percipioformatted.duration}}<div><strong>{{#str}} template_duration, tool_percipioexternalcontentsync {{/str}}: </strong>{{percipioformatted.duration}}</div>{{/percipioformatted.duration}}
+            {{#hasby}}<div><strong>{{#str}} template_by, tool_percipioexternalcontentsync {{/str}}: </strong>{{#percipio.by}}{{.}}, {{/percipio.by}}</div>{{/hasby}}
+            {{#percipio.publication}}<div><strong>{{#str}} template_publisher, tool_percipioexternalcontentsync {{/str}}: </strong>{{publisher}}{{#copyrightYear}} {{.}}{{/copyrightYear}}</div>{{/percipio.publication}}
+            {{#percipio.publication.isbn}}<div><strong>{{#str}} template_isbn, tool_percipioexternalcontentsync {{/str}}: </strong>{{.}}</div>{{/percipio.publication.isbn}}
+            {{#percipio.lifecycle}}<div><strong>{{#str}} template_updateddate, tool_percipioexternalcontentsync {{/str}}: </strong>{{lastUpdatedDate}}</div>{{/percipio.lifecycle}}
+            {{^percipio.lifecycle.retiredDate}}{{#percipio.lifecycle.plannedRetirementDate}}<div><strong>{{#str}} template_retirementdate, tool_percipioexternalcontentsync {{/str}}: </strong>{{.}}</div>{{/percipio.lifecycle.plannedRetirementDate}}{{/percipio.lifecycle.retiredDate}}
+            {{#percipio.lifecycle.retiredDate}}<div><strong>{{#str}} template_retireddate, tool_percipioexternalcontentsync {{/str}}: </strong>{{.}}</div>{{/percipio.lifecycle.retiredDate}}
         </div>
     </div>
     <div class="row p-1">
         <div class="col">
-            <div class="pt-1"><strong>Description</strong></div>
+            <div class="pt-1"><strong>{{#str}} template_description, tool_percipioexternalcontentsync {{/str}}</strong></div>
             <div>{{percipio.localizedMetadata.0.description}}</div>
             {{#hasobjectives}}
-            <div class="pt-1"><strong>Learning Objectives</strong></div>
+            <div class="pt-1"><strong>{{#str}} template_objectives, tool_percipioexternalcontentsync {{/str}}</strong></div>
             <div>
               <ul>
               {{#percipio.learningObjectives}}<li>{{.}}</li>{{/percipio.learningObjectives}}
@@ -181,7 +181,7 @@
      {{#showlaunch}}
     <div class="row p-1">
         <div class="col">
-            <div><a href="{{percipio.link}}" target="_blank" class="btn btn-primary">Launch</a></div>
+            <div><a href="{{percipio.link}}" target="_blank" class="btn btn-primary">{{#str}} template_launch, tool_percipioexternalcontentsync {{/str}}</a></div>
         </div>
     </div>
     {{/showlaunch}}
