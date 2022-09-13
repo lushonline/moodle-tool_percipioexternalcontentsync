@@ -113,7 +113,25 @@ class helper {
         $data->hasobjectives = isset($asset->learningObjectives) && count(array_filter($asset->learningObjectives)) > 0;
 
         if ($contents = self::get_template()) {
-            $mustache = new \core\output\mustache_engine();
+
+            // Add helper functions, we cannot use a renderer class as we need to render from a string.
+            $stringhelper = new \core\output\mustache_string_helper();
+            $cleanstringhelper = new \core\output\mustache_clean_string_helper();
+            $quotehelper = new \core\output\mustache_quote_helper();
+            $shortentexthelper = new \core\output\mustache_shorten_text_helper();
+            $userdatehelper = new \core\output\mustache_user_date_helper();
+
+            $helpers = array(
+                             'str' => array($stringhelper, 'str'),
+                             'cleanstr' => array($cleanstringhelper, 'cleanstr'),
+                             'quote' => array($quotehelper, 'quote'),
+                             'shortentext' => array($shortentexthelper, 'shorten'),
+                             'userdate' => array($userdatehelper, 'transform'),
+                         );
+
+            $mustache = new \core\output\mustache_engine(array(
+                'helpers' => $helpers,
+            ));
             $result = $mustache->render($contents, $data);
         }
 
