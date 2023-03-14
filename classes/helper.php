@@ -388,7 +388,7 @@ class helper {
         $courseimport->summary = self::get_percipio_description($asset);
         $courseimport->tags = self::get_percio_asset_tags($asset);
         $courseimport->visible = strcasecmp($asset->lifecycle->status, 'ACTIVE') == 0 ? 1 : 0;
-        $courseimport->thumbnail = $thumbnail ? self::sanitizeurl($asset->imageUrl) : null;
+        $courseimport->thumbnail = self::sanitizeurl($asset->imageUrl);
         $courseimport->category = $categoryid;
 
         // Create moduleimport class.
@@ -398,8 +398,12 @@ class helper {
         $moduleimport->content = self::get_percipio_description($asset, true, true);
         $moduleimport->completionexternally = strcasecmp($asset->contentType->percipioType, 'CHANNEL') == 0 ? 0 : 1;
 
+        // Create options class.
+        $options = new \stdClass();
+        $options->downloadthumbnail = $thumbnail;
+
         // Get our importrecord.
-        $importrecord = new importrecord($courseimport, $moduleimport);
+        $importrecord = new importrecord($courseimport, $moduleimport, $options);
         return $importrecord->validate() ? $importrecord : false;
     }
 
