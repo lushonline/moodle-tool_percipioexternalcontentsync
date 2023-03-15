@@ -18,7 +18,7 @@
  * Helper functions for creating External Content activities from a Percipio Asset.
  *
  * @package    tool_percipioexternalcontentsync
- * @copyright  2019-2022 LushOnline
+ * @copyright  2019-2023 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -32,7 +32,7 @@ use mod_externalcontent\importrecord;
  * Class containing a set of helpers.
  *
  * @package   tool_percipioexternalcontentsync
- * @copyright 2019-2022 LushOnline
+ * @copyright 2019-2023 LushOnline
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class helper {
