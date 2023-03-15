@@ -370,9 +370,9 @@ class helper {
      * @param object $asset The asset we recieved from Percipio
      * @param string|int $parentcategory The parentcategory name or id
      * @param bool $thumbnail If true, then the thumbnail for the course will be processed.
-     * @return mod_externalcontent\importrecord|bool The asset converted to an importrecord, or false if not valid
+     * @return mod_externalcontent\importrecord|null The asset converted to an importrecord, or null if not valid
      */
-    public static function percio_asset_to_importrecord($asset, $parentcategory = null, $thumbnail = true) : importrecord {
+    public static function percio_asset_to_importrecord($asset, $parentcategory = null, $thumbnail = true) : ?importrecord {
 
         // Create/Retrieve categoryid.
         $parentcategoryid = self::resolve_category_by_id_or_idnumber($parentcategory);
@@ -404,7 +404,7 @@ class helper {
 
         // Get our importrecord.
         $importrecord = new importrecord($courseimport, $moduleimport, $options);
-        return $importrecord->validate() ? $importrecord : false;
+        return $importrecord->validate() ? $importrecord : null;
     }
 
 
