@@ -18,7 +18,7 @@
  * Privacy Subsystem implementation for tool_percipioexternalcontentsync.
  *
  * @package    tool_percipioexternalcontentsync
- * @copyright  2019-2022 LushOnline
+ * @copyright  2019-2023 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,7 +27,7 @@ namespace tool_percipioexternalcontentsync\privacy;
 /**
  * Privacy Subsystem for tool_percipioexternalcontentsync implementing null_provider.
  *
- * @copyright  2019-2022 LushOnline
+ * @copyright  2019-2023 LushOnline
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {
