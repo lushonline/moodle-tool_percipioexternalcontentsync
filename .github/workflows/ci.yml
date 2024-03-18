@@ -15,7 +15,7 @@ jobs:
         database: ["pgsql", "mariadb"]
         operating-system: [ubuntu-latest]
         php-versions: ["7.4", "8.0"]
-        node-versions: ["16.16.0"]
+        node-versions: ["20.11.0"]
 
     runs-on: ${{ matrix.operating-system }}
 
